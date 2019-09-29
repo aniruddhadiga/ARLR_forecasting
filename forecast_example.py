@@ -31,7 +31,7 @@ from scipy.stats.distributions import chi2
 from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
-from data_prep import data_read_and_prep, get_season
+from data_prep import data_read_and_prep, get_season, hist_win
 from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct
 
 csv_path='data/national/ILINet.csv'
@@ -40,13 +40,11 @@ epwk = 20
 yr = 2018
 test_wks = 1
 win = 208 # 4-year window train window
-
+plt_res=True
 
 train, test, df, df_train, df_test = data_read_and_prep(csv_path, epwk, yr, test_wks, wght=False, log_tr=True)
 # dates = pd.DatetimeIndex(df_train["DATE"])
-plt.figure(figsize=(12,7))
-plt.subplot(2,1,1);plt.plot(train.index,(train));plt.title('Full training data from specified epiweek {}, {}'.format(epwk,yr))
-# plt.subplot(2,1,2);plt.plot((hist_win(train,win)).index,(hist_win(train,win)));plt.title('Training data: 4 year period')
+ 
 
 # Check data for stationarity in the training data with padding
 
@@ -59,7 +57,7 @@ print(result)
 if result[1] < 0.05:
     print('p-val of ADF test %e' %result[1])
     print('Stationary signal')
-plt.plot(train_win)
+
 
 # Check seasonality
 season_ind = get_season(train_win,fft_len=1024,figs=True)
@@ -83,6 +81,9 @@ print(lags_app)
 
 yp_fct, ind_fct= ARLR_fct(res,train,test,lags_app,test_wks)
 
+plt.figure(figsize=(12,7))
+#plt.subplot(2,1,1);plt.plot(train.index,(train_win));plt.title('Full training data from specified epiweek {}, {}'.format(epwk,yr))
+plt.subplot(2,1,2);plt.plot((hist_win(train,win)).index,(hist_win(train,win)));plt.title('Training data: 4 year period')
 plt.figure(figsize=(12,7))
 # h5, = plt.plot(train)
 h1, = plt.plot(y_obs)

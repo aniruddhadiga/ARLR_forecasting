@@ -55,3 +55,9 @@ def get_season(y,fft_len=1024,figs=False):
         plt.figure();plt.semilogy(f, Pxx_den)
 #         plt.plot(Pxx_den.argmax(),1,'r--')
     return int(season_ind)
+
+def hist_win(y,win):
+    y_hist = y[(-win-1):-1]
+    return y_hist
+
+
