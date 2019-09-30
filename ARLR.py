@@ -2,7 +2,7 @@ from statsmodels.tsa.ar_model import AR
 import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-
+import pdb
 # ARLR functions
 def ARLR_aug_phase(train,lags,win,llr_tol=1e-2):
     y = np.flip(train)
@@ -101,10 +101,6 @@ def ARLR_err_met(yp_fct, test):
     return RMSE, MAE, MAPE
 
 
-def hist_win(y,win):
-    y_hist = y[(-win-1):-1]
-    return y_hist
-
 def create_bootstrap(train, pred_err, res, lags_app, win):
 #     pdb.set_trace()
     lags_app = lags_app.astype('int')
@@ -135,11 +131,17 @@ def fct_uncert(train,test, pred_err,res, lags_app, win, Nb=1000):
     return yb_fct
 
 def uncer_scr(yb_fct, test, yp_fct, ms_fct, N_b, n_bins=13):
+    be = np.arange(0,n_bins,.1)
+    be = np.append(be,20)
+    bn_mat = np.zeros([len(be)-1, ms_fct])
     log_scr = np.zeros(ms_fct)
     for i in range(0,ms_fct):
         plt.subplot(ms_fct,1,i+1)
-        bn = plt.hist(np.exp(yb_fct[i,:]),np.round((np.linspace(0.1,n_bins,130)),1))# plt.plot(y_obs)
-        probs = dict(zip(bn[1],bn[0]/N_b))
+        bn = plt.hist(np.exp(yb_fct[i,:]),bins=be)# plt.plot(y_obs)
+        probs = dict(zip(np.round(bn[1],1),bn[0]/N_b))
+        pdb.set_trace()
         log_scr[i] = np.log(probs[np.floor(np.exp(test[i])*10)/10.])
+        bn_mat[:,i] = bn[0]/N_b
+        pdb.set_trace()
         print('Week: {}, Fct: {}, True: {}, Bs: {}, log_scr: {}'.format(i+1, np.exp(yp_fct[i]), np.exp(test[i]), np.mean(np.exp(yb_fct[i])), log_scr[i]))
-        
+    return log_scr, bn_mat
