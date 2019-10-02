@@ -1,3 +1,4 @@
+# %load data_prep.py
 import sys
 import os
 import pandas as pd
@@ -59,5 +60,6 @@ def get_season(y,fft_len=1024,figs=False):
 def hist_win(y,win):
     y_hist = y[(-win-1):-1]
     return y_hist
+
 
 

@@ -37,15 +37,15 @@ from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_unc
 # Multi-step forecast
 csv_path='data/national/ILINet.csv'
 
-epwk = 40
-yr = 2016
+epwk = 21
+yr = 2018
 win = 208
-ms_fct = 4
-fct_win = 108
+ms_fct = 1
+fct_win = 1
 
 llr_tol=1e-2
 allw_lags = np.arange(1,52)
-uncer_anl = False
+uncer_anl = True
 Nb = 100
 # Read csv file and create train and test data
 train, test, df, df_train, df_test = data_read_and_prep(csv_path, epwk, yr, fct_win, wght=False, log_tr=True)
@@ -87,7 +87,7 @@ yp_train.index = ind[:]
 
 # lags to be tested
 obs = train
-yp_fct = np.zeros([ms_fct, fct_win+ms_fct])
+yp_fct = np.zeros([ms_fct, fct_win])
 
 for fct_wks in range(0, fct_win):
     
@@ -101,10 +101,10 @@ for fct_wks in range(0, fct_win):
 #     ind_fct = []
     for mwks in range(0,ms_fct):
         #range(mwks+1,60)
-        yp_fct[mwks,fct_wks+mwks], ind_fct= ARLR_fct(resf,fct_prdtrs,test[(mwks):],lags_app,1)
+        yp_fct[mwks,fct_wks], ind_fct= ARLR_fct(resf,fct_prdtrs,test[(mwks):],lags_app,1)
 #         ind_fct.append(ind_temp)
 #         pdb.set_trace()
-        pred_err = np.append(test[mwks]-yp_fct[mwks],pred_err)
+        pred_err = np.append(test[mwks]-yp_fct[mwks,fct_wks],pred_err)
         cffs_arlr[mwks,lags_app-1] = resf.params
         lags_app_fct[mwks,lags_app] = lags_app
         if uncer_anl:    
@@ -115,7 +115,7 @@ for fct_wks in range(0, fct_win):
         #plt.figure(mwks,figsize=(14,5));plt.plot(ind,yp1);plt.plot(y_obs)
     #     pdb.set_trace()
     if uncer_anl:
-        log_scr, bn_mat = uncer_scr(yb_fct, test, yp_fct, ms_fct, Nb, 13)
+        log_scr, bn_mat = uncer_scr(yb_fct, test, yp_fct[:,fct_wks], ms_fct, Nb, 13)
     #rmse, mae, mape = ARLR_err_met(yp_fct[:,fct_wks], test[:ms_fct])
     
     #pdb.set_trace()
