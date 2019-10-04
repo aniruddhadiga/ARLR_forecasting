@@ -2,20 +2,17 @@
 import sys
 import os
 import pandas as pd
-from cycler import cycler
 import numpy as np
 import statsmodels.api as sm
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-import seaborn as sns
 import epiweeks as epi
 import datetime
 import argparse
 import re
 import shutil
 import pdb
-sns.set()
 
 from pandas import Series
 from datetime import date, time, datetime, timedelta
