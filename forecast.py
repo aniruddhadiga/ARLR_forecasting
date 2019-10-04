@@ -4,15 +4,16 @@ import os
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+#import matplotlib as mpl
+#import matplotlib.pyplot as plt
+#import matplotlib.cm as cm
 import epiweeks as epi
 import datetime
 import argparse
 import re
 import shutil
 import pdb
+import configparser
 
 from pandas import Series
 from datetime import date, time, datetime, timedelta
@@ -31,26 +32,31 @@ from statsmodels.tsa.stattools import adfuller
 from data_prep import data_read_and_prep, get_season
 from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model
 
+config = configparser.ConfigParser()
+config_file = sys.argv[1]
+config.read(config_file)
+
 # Multi-step forecast
-csv_path='data/national/ILINet.csv'
+csv_path=config['Forecasting']['csv_path'] #'data/national/ILINet.csv'
 
-epwk = 10 # date from which to start forecasting
-yr = 2013 # Model trained on data upto (epiweek, year)
+epwk = int(config['Forecasting']['epwk']) # date from which to start forecasting
+yr = int(config['Forecasting']['yr']) # Model trained on data upto (epiweek, year)
 
-win = 208 # Length of the historial training data to be considered
+win = int(config['Forecasting']['win']) # Length of the historial training data to be considered
 
-fut_wks = 1 # Number of weeks ahead to forecast from training data 
-ms_fct = 4 # For every forecast week, give additional ms_fct weeks forecast
+fut_wks = int(config['Forecasting']['fut_wks']) # Number of weeks ahead to forecast from training data 
+ms_fct = int(config['Forecasting']['ms_fct']) # For every forecast week, give additional ms_fct weeks forecast
 
 test_win = fut_wks+ms_fct # Number of true value to be fetched (testing accuracy)
-exp_max_lags = 208 # expected maximum lags to be considered in the model
+exp_max_lags =  int(config['Forecasting']['exp_max_lags'])# expected maximum lags to be considered in the model
 llr_tol=1e-2 # log-likelihood tolerance
 
 # Uncertainty analysis
-uncer_anl = True
-Nb = 1000
+uncer_anl = (config['CDC']['uncer_anl'])
+Nb = int(config['CDC']['Nb'])
 # create bins
-n_bins=13
+n_bins=int(config['CDC']['n_bins'])
+
 bin_ed = np.arange(0,n_bins,.1)
 bin_ed = np.append(bin_ed,20)
 

@@ -2,7 +2,7 @@
 from statsmodels.tsa.ar_model import AR
 import numpy as np
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pandas as pd
 import pdb
 # ARLR functions
@@ -125,7 +125,7 @@ def create_bootstrap(train, pred_err, coeffs, lags_app, win):
     err_b = np.random.choice(pred_err,win)
     max_lag = np.max(lags_app).astype('int')    
     yb_temp = np.zeros((win+max_lag))
-    #yb_temp[win:] = y[win:(win+max_lag)]
+    yb_temp[win:] = y[win:(win+max_lag)]
     for i in range(win):
         yb_temp[(win-i-1)] = np.dot(yb_temp[win-(i+1)+lags_app]+err_b[i], coeffs[lags_app])
 #     pdb.set_trace()
@@ -142,13 +142,15 @@ def fct_uncert(train,test, pred_err,coeffs, lags_app, win, Nb=1000):
     lags_app = lags_app[lags_app!=0].astype(int)
     yb_mat = np.zeros([Nb,win])
     yb_fct = np.zeros(Nb)
-    i=0
+    i=0 # discard outlier sample values
+    t_o = 0 # time out variable
     while i < Nb:
 #         pdb.set_trace()
         yb_mat[i,:],ind = create_bootstrap(train, pred_err, coeffs, lags_app, win)
 #         pdb.set_trace()
         yb_fct[i], ind_fct, pred = ARLR_fct(coeffs,yb_mat[i,:],test,lags_app,1,1)
-        if np.abs(yb_fct[i]) > 10:
+        if np.abs(yb_fct[i]) > 10 & t_o<10000:
+            t_o+=1
             continue
         else:
             i+=1
@@ -163,7 +165,7 @@ def uncer_scr(yb_fct, test, yp_fct, ms_fct, N_b, bin_ed):
     log_scr = np.zeros(ms_fct)
 #     pdb.set_trace()
 #         plt.subplot(ms_fct,1,i+1)
-    bn = plt.hist(np.exp(yb_fct[:]),bins=bin_ed)# plt.plot(y_obs)
+    bn = np.histogram(np.exp(yb_fct[:]),bins=bin_ed)# plt.plot(y_obs)
     probs = dict(zip(np.round(bn[1],1),bn[0]/N_b))
     log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
     bn_mat = bn[0]/N_b
