@@ -190,3 +190,70 @@ def multi_step_fct(data_frame, data_test, coeffs, lags_app, train_pred_err, ms_f
             log_scr[wks-1], bn_mat[:, wks-1] = uncer_scr(yb_fct[wks-1,:], data_test[wks-1], yp_fct[wks-1], ms_fct, Nb, bin_ed)
         print('Week: {}, Fct: {}, True: {}, Bs: {}, log_scr: {}'.format(wks, np.exp(yp_fct[wks-1]), np.exp(data_test[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
     return yp_fct, yb_fct, log_scr, bn_mat, train_pred_err
+
+def outputdistribution(predictions,bn_mat, bin_ed, region, target, stdev, directory, week):
+    output = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    for i, prediction in enumerate(predictions):
+        df = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+        hist = bn_mat[:,i]
+        if region.isdigit():
+            df.loc[0] = ["HHS Region " + region, str(i+1) + " wk ahead", "Point", "percent", "NA", "NA", prediction]
+        else:
+            df.loc[0] = [region, str(i+1) + " wk ahead", "Point", "percent", "NA", "NA", prediction]
+
+        
+        for j, element in enumerate(hist):
+            if region.isdigit():
+                df.loc[j+1] = ["HHS Region " + region, str(i+1) + " wk ahead", "Bin", "percent", bins[j], bins[j+1], hist[j]/10]
+            else:
+                df.loc[j+1] = [region, str(i+1) + " wk ahead", "Bin", "percent", bins[j], bins[j+1], hist[j]/10]
+        
+        
+        output = output.append(df)
+    
+    df2 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    df3 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    df4 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    
+    if region.isdigit():
+        df2.loc[0] = ["HHS Region " + region, "Season onset", "Bin", "week", "none", "none", 0.029411765]
+    else:
+        df2.loc[0] = [region,"Season onset", "Bin", "week", "none", "none", 0.029411765]
+
+    for i in range(40,53):
+        if region.isdigit():
+            df2.loc[i-39] = ["HHS Region " + region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+        else:
+            df2.loc[i-39] = [region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+    for i in range(1, 21):
+        if region.isdigit():
+            df2.loc[i+14] = ["HHS Region " + region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+        else:
+            df2.loc[i+14] = [region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+
+    for i in range(40,53):
+        if region.isdigit():
+            df3.loc[i-40] = ["HHS Region " + region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+        else:
+            df3.loc[i-40] = [region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+    for i in range(1, 21):
+        if region.isdigit():
+            df3.loc[i+13] = ["HHS Region " + region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+        else:
+            df3.loc[i+13] = [region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+
+    for i, element in enumerate(hist):
+        if region.isdigit():
+            df4.loc[i+1] = ["HHS Region " + region, "Season peak percentage", "Bin", "percent", bins[i], bins[i+1], 0.007633588]
+        else:
+            df4.loc[i+1] = [region, "Season peak percentage", "Bin", "percent", bins[i], bins[i+1], 0.007633588]
+
+    output = output.append(df2)
+    output = output.append(df3)
+    output = output.append(df4)
+
+    
+    #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
+    
+    output.to_csv(directory + "/EW" + str(week).zfill(2) + ".csv", index=False)    
+    return
