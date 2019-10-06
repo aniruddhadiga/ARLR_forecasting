@@ -48,6 +48,7 @@ def data_read_and_prep(csv_path, epwk, yr, test_wks=4, wght=False, log_tr=False)
 
 def get_season(y,fft_len=1024,figs=False):
     f, Pxx_den = signal.periodogram(y, nfft=fft_len)
+    Pxx_den = np.abs(Pxx_den)
     season_ind = round(fft_len/Pxx_den.argmax())
     print('Season index {}'.format(season_ind))
     if figs:
@@ -59,5 +60,9 @@ def hist_win(y,win):
     y_hist = y[(-win-1):-1]
     return y_hist
 
-
+def prepdata():
+    national = pd.read_csv('../data/national/ILINet.csv', header=1)
+    regional = national.append(pd.read_csv('../data/regional/ILINet.csv', header=1))
+    df = regional.append(pd.read_csv('../data/state/ILINet.csv', header=1))
+    return df
 
