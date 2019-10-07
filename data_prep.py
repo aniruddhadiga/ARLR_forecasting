@@ -61,8 +61,8 @@ def hist_win(y,win):
     return y_hist
 
 def prepdata():
-    national = pd.read_csv('../data/national/ILINet.csv', header=1)
-    regional = national.append(pd.read_csv('../data/regional/ILINet.csv', header=1))
-    df = regional.append(pd.read_csv('../data/state/ILINet.csv', header=1))
+    national = pd.read_csv('data/national/ILINet.csv', header=1)
+    regional = national.append(pd.read_csv('data/regional/ILINet.csv', header=1))
+    df = regional.append(pd.read_csv('data/state/ILINet.csv', header=1))
     return df
 

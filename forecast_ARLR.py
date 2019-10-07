@@ -33,7 +33,7 @@ from data_prep import data_read_and_prep, get_season, prepdata
 from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution
 
 def national():
-    cdcdf = pd.read_csv('../data/national/ILINet.csv', header=1)
+    cdcdf = pd.read_csv('data/national/ILINet.csv', header=1)
     df = cdcdf.drop(["REGION", "REGION TYPE", "AGE 0-4", "AGE 25-49", "AGE 25-64", "AGE 5-24", "AGE 50-64", "AGE 65", "NUM. OF PROVIDERS"], axis=1)
     
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
@@ -41,7 +41,7 @@ def national():
     return df
 
 def region(number):
-    cdcdf = pd.read_csv('../data/regional/ILINet.csv', header=1)
+    cdcdf = pd.read_csv('data/regional/ILINet.csv', header=1)
     cdcdf.drop(["REGION TYPE", "AGE 0-4", "AGE 25-49", "AGE 25-64", "AGE 5-24", "AGE 50-64", "AGE 65", "NUM. OF PROVIDERS"], axis=1, inplace = True)
     dfs = {}
     for region in cdcdf["REGION"].unique():
@@ -54,7 +54,7 @@ def region(number):
     return dfs["Region " + number]
 
 def state(name):
-    cdcdf = pd.read_csv('../data/state/ILINet.csv', header=1)
+    cdcdf = pd.read_csv('data/state/ILINet.csv', header=1)
     cdcdf = cdcdf.drop(["REGION TYPE", "AGE 0-4", "AGE 25-49", "AGE 25-64", "AGE 5-24", "AGE 50-64", "AGE 65", "NUM. OF PROVIDERS"], axis=1)
     dfs = {}
 
