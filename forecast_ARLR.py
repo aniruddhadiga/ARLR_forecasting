@@ -68,7 +68,8 @@ def state(name):
         #df.drop(["YEAR", "WEEK"], axis = 1, inplace = True)
     
     return dfs[name]
-regions = {"national": national, "1": region, "2": region, "3": region, "4": region, "5": region, "6": region, "7": region, "8": region, "9": region, "10": region, "Alabama": state, "Alaska": state, "Arizona": state, "Arkansas": state,"California": state, "Colorado": state, "Connecticut": state, "Delaware": state, "Florida": state, "Georgia": state, "Hawaii": state, "Idaho": state, "Illinois": state, "Indiana": state, "Iowa": state, "Kansas": state, "Kentucky": state,"Louisiana": state, "Maine": state, "Maryland": state, "Massachusetts": state, "Michigan": state, "Minnesota": state, "Mississippi": state, "Missouri": state, "Montana": state, "Nebraska": state, "Nevada": state, "New Hampshire": state, "New Jersey": state, "New Mexico": state, "New York": state, "North Carolina": state, "North Dakota": state, "Ohio": state, "Oklahoma": state, "Oregon": state, "Pennsylvania": state, "Rhode Island": state, "South Carolina": state, "South Dakota": state, "Tennessee": state, "Texas": state, "Utah": state, "Vermont": state, "Virginia": state, "Washington": state, "West Virginia": state, "Wisconsin": state, "Wyoming": state}
+regions = {"national": national, "1": region, "2": region, "3": region, "4": region, "5": region, "6": region, "7": region, "8": region, "9": region, "10": region, "Alabama": state, "Alaska": state, "Arizona": state, "Arkansas": state, "California": state, "Colorado": state, "Connecticut": state, "Delaware": state, "Georgia": state, "Hawaii": state, "Idaho": state, "Illinois": state, "Indiana": state, "Iowa": state, "Kansas": state, "Kentucky": state, "Louisiana": state, "Maine": state, "Maryland": state, "Massachusetts": state, "Michigan": state, "Minnesota": state, "Mississippi": state, "Missouri": state, "Montana": state, "Nebraska": state, "Nevada": state, "New Hampshire": state, "New Jersey": state, "New Mexico": state, "New York": state, "North Carolina": state, "North Dakota": state, "Ohio": state, "Oklahoma": state, "Oregon": state, "Pennsylvania": state, "Rhode Island": state, "South Carolina": state, "South Dakota": state, "Tennessee": state, "Texas": state, "Utah": state, "Vermont": state, "Virginia": state, "Washington": state, "West Virginia": state, "Wisconsin": state, "Wyoming": state}
+
 
 targets = {"wili": "% WEIGHTED ILI", "ili": "%UNWEIGHTED ILI", "ilitotal": "ILITOTAL", "totalpatients": "TOTAL PATIENTS"} #onset and peak week still need to be added
 
@@ -81,6 +82,9 @@ def ARLR_module(df, region, target, epi_week):
     ww_train = epi_week-1
     ww_test = epi_week   
     cdcdf = df
+    df = df.convert_objects(convert_numeric=True)
+    #df[target] = df[target].replace(0,1e-2)
+    #df[target].dropna()
     starttraining_date = pd.to_datetime(ww_train.startdate())
     testing_date = pd.to_datetime(ww_test.startdate())
     #endtraining = pd.to_datetime(enddate.startdate())
@@ -95,17 +99,21 @@ def ARLR_module(df, region, target, epi_week):
     elif region.isdigit():
         df = cdcdf[cdcdf['REGION']== "Region " + str(region)]
         df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
-        df.set_index(['DATE'], inplace=True)
+        #df.set_index(['DATE'], inplace=True)
 
         #When I set the date row as the index, I can no longer access it using df['DATE]
     else:
         df = cdcdf[cdcdf['REGION']==region]
+        
         df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
-        df.set_index(['DATE'], inplace=True)
+        #df.set_index(['DATE'], inplace=True)
     
     df_train = df[(df['DATE']<pd.to_datetime(ww_train.startdate()))]
+    df_train[target] = df_train[target].convert_objects(convert_numeric=True)
+    df_train[target] = df_train[target].replace(0,1e-2)
     df_test = df[(df['DATE']>=pd.to_datetime(ww_train.startdate()))]
-    
+    df_test[target] = df_test[target].convert_objects(convert_numeric=True)
+    df_test[target] = df_test[target].replace(0,1e-2)
     #targetdf = Series(df[target])
     #target_series = targetdf[:starttraining_date]
     #df_train = target_series[:-1]
@@ -150,14 +158,14 @@ def ARLR_module(df, region, target, epi_week):
     train_win = train[-1:(-win-exp_max_lags-1):-1] # training samples in the window period + buffer
     
     
-    result = adfuller(train_win)
+    #result = adfuller(train_win)
     #print(result)
     #if result[1] < 0.05:
     #    print('p-val of ADF test %e' %result[1])
     #    print('Stationary signal')
     # plt.plot(train_win)
     # Check seasonality
-    season_ind = get_season(train_win,fft_len=1024,figs=False)
+    #season_ind = get_season(train_win,fft_len=1024,figs=False)
     # train the model
     max_lags = 55
     coeffs=np.zeros([ms_fct,max_lags])
@@ -223,12 +231,17 @@ def main(args):
     trainweek = startweek
     ww = epi.Week(int(startyear), int(startweek))
     region = args["REGION"]
-    target = targets[args["TARGET"]]
+    print(region)
+    if region=='US National' or region.isdigit():
+        target = targets["wili"]
+    else:
+        target = targets["ili"]
     df = prepdata()
+    df = df.drop(df[df['REGION'] == 'Florida'].index)
     directory = 'output/' + str(ww.year) + '/'
     if not os.path.exists(directory):
         os.makedirs(directory)
-    for i in range(0, 40):
+    for i in range(0, 1):
         predictions, bn_mat = ARLR_module(df, region, target, ww+i)
         #pdb.set_trace()
         outputdistribution(predictions.reshape(4), bn_mat.reshape([131,4]), bin_ed, region, target, directory, ww+i)
@@ -249,4 +262,7 @@ if __name__ == "__main__":
 
 # Multi-step forecast
     for key in regions.keys():
-        main({"REGION": key, "TARGET": "ili", "STARTDATE": "2017EW40", "ENDDATE": "2016EW39"})
+        if key == 'national' or key.isdigit() or key=='Florida':
+            continue
+        else:
+            main({"REGION": key, "TARGET": "ili", "STARTDATE": "2017EW40", "ENDDATE": "2016EW39"})

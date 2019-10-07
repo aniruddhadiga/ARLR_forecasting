@@ -4,7 +4,7 @@ import numpy as np
 import statsmodels.api as sm
 #import matplotlib.pyplot as plt
 import pandas as pd
-import pdb
+import pdb, os
 # ARLR functions
 def ARLR_aug_phase(train,lags,win,llr_tol=1e-2):
     y = np.flip(train)
@@ -256,6 +256,10 @@ def outputdistribution(predictions,bn_mat, bins, region, target, directory, epi_
     
         #pdb.set_trace()
     #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
+
     filename = 'EW' + str(epi_wk.week) + '_ARLR_' + str(epi_wk.startdate()) + '.csv'
-    output.to_csv(directory + filename, index=False)    
+    if not os.path.isfile(directory+filename):
+        output.to_csv(directory + filename, index=False) 
+    else:
+        output.to_csv(directory + filename, mode='a', index=False, header=False)  
     return
