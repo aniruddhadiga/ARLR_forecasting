@@ -82,7 +82,7 @@ def ARLR_module(df, region, target, epi_week):
     ww_train = epi_week-1
     ww_test = epi_week   
     cdcdf = df
-    df = df.convert_objects(convert_numeric=True)
+    #df[target] = df[target].convert_objects(convert_numeric=True)
     #df[target] = df[target].replace(0,1e-2)
     #df[target].dropna()
     starttraining_date = pd.to_datetime(ww_train.startdate())
@@ -109,10 +109,10 @@ def ARLR_module(df, region, target, epi_week):
         #df.set_index(['DATE'], inplace=True)
     
     df_train = df[(df['DATE']<pd.to_datetime(ww_train.startdate()))]
-    df_train[target] = df_train[target].convert_objects(convert_numeric=True)
+    df_train[target] = np.array(df_train[target],float)
     df_train[target] = df_train[target].replace(0,1e-2)
     df_test = df[(df['DATE']>=pd.to_datetime(ww_train.startdate()))]
-    df_test[target] = df_test[target].convert_objects(convert_numeric=True)
+    df_test[target] = np.array(df_test[target],float)
     df_test[target] = df_test[target].replace(0,1e-2)
     #targetdf = Series(df[target])
     #target_series = targetdf[:starttraining_date]
@@ -241,7 +241,7 @@ def main(args):
     directory = 'output/' + str(ww.year) + '/'
     if not os.path.exists(directory):
         os.makedirs(directory)
-    for i in range(0, 1):
+    for i in range(0, 40):
         predictions, bn_mat = ARLR_module(df, region, target, ww+i)
         #pdb.set_trace()
         outputdistribution(predictions.reshape(4), bn_mat.reshape([131,4]), bin_ed, region, target, directory, ww+i)
