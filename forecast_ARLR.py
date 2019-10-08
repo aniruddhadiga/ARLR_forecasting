@@ -262,7 +262,7 @@ if __name__ == "__main__":
 
 # Multi-step forecast
     for key in regions.keys():
-        if key == 'national' or key.isdigit() or key=='Florida':
+        if key=='Florida':
             continue
         else:
             main({"REGION": key, "TARGET": "ili", "STARTDATE": "2017EW40", "ENDDATE": "2016EW39"})
