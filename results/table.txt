@@ -1,0 +1,14 @@
+\begin{tabular}{lllrr}
+      location &      target &     score &     skill \\
+  HHS Region 1 &  4 wk ahead & -2.496376 &  0.409826 \\
+ HHS Region 10 &  4 wk ahead & -5.246797 &  0.109211 \\
+  HHS Region 2 &  4 wk ahead & -3.378507 &  0.115135 \\
+  HHS Region 3 &  4 wk ahead & -1.274339 &  0.385315 \\
+  HHS Region 4 &  4 wk ahead & -5.320038 &  0.128174 \\
+  HHS Region 5 &  4 wk ahead & -1.011277 &  0.485448 \\
+  HHS Region 6 &  4 wk ahead & -6.734693 &  0.032126 \\
+  HHS Region 7 &  4 wk ahead & -2.092483 &  0.432093 \\
+  HHS Region 8 &  4 wk ahead & -6.416785 &  0.230680 \\
+  HHS Region 9 &  4 wk ahead & -0.626104 &  0.574658 \\
+   US National &  4 wk ahead & -2.169039 &  0.163432 \\
+\end{tabular}
