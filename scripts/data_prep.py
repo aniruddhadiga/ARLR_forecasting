@@ -2,11 +2,7 @@
 import sys
 import os
 import pandas as pd
-from cycler import cycler
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import epiweeks as epi
 import datetime
 import argparse

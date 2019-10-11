@@ -159,7 +159,6 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     train_pred_err=np.zeros([ms_fct, win])
     yp_train=np.zeros([ms_fct, win]) 
     lags_app=np.zeros([ms_fct,max_lags])
-    
     # Train to obtain ARLR coeffs for all specified multi-step forecast:
     # Ex: For 1-step forecast, consider data from t-1 to t-p for training: ms_fct = 1
     # for 4-step forecast, consider data for t-4 to t-p for training: ms_fct = 4 
@@ -281,10 +280,10 @@ def main():
         df = fdf[fdf['REGION']==region]       
         predictions, bn_mat = ARLR_module(df, region, target, ews, fct_weeks)
         if int(args.CDC):
-            outputdistribution(predictions[0:4].reshape(4), bn_mat[0:4,:].reshape([131,4]), bin_ed, region, target, directory, ews)
+            outputdistribution(predictions[0,0:4], bn_mat[0,:0:4], bin_ed, region, target, directory, ews)
         if df['REGION TYPE'].unique() == 'States':
             print(region)
-            accu_output(predictions.reshape(4), region,  args.out_state, ews, args.st_fips)
+            accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
 if __name__ == "__main__":
     main()
 # Multi-step forecast
