@@ -1,6 +1,6 @@
 # ARLR_forecasting
-
-python forecast_ARLR.py -b 2018EW40 -w 4 --out_state dump/ --ground_truth data/state/ILINet.csv -v --CDC 1 --test 1 --st_fips data/state_fips.csv
+cd scripts
+python forecast_ARLR.py -b 2018EW40 -w 4 --out_state dump/ --ground_truth ../data/state/ILINet.csv -v --CDC 1 --test 1 --st_fips ../data/state_fips.csv
 
 optional arguments:
   -h, --help            show this help message and exit
