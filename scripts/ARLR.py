@@ -264,7 +264,7 @@ def outputdistribution(predictions,bn_mat, bins, region, target, directory, epi_
         output.to_csv(directory + filename, mode='a', index=False, header=False)  
     return
     
-def accu_output(predictions, region, accu_dir, ews, st_fips_path):
+def accu_output(predictions, region, accu_file, ews, st_fips_path):
     df_s = pd.read_csv(st_fips_path)
     st_fips_val = df_s[df_s['state_name']==region]['state']
     pred_state = []
@@ -274,9 +274,8 @@ def accu_output(predictions, region, accu_dir, ews, st_fips_path):
         pred_state.append({'date':prediction_date.isoformat(),'area_id':'{:02}'.format(st_fips_val.values[0]),'ili':predictions[i]})
         df_state = pd.DataFrame(pred_state)
     output=output.append(df_state)
-    filename = 'prediction-'+prediction_date.strftime('%Y%m%d')+'-state-level.csv'
-    if not os.path.isfile(accu_dir+filename):
-        output.to_csv(accu_dir + filename, index=False) 
+    if not os.path.isfile(accu_file):
+        output.to_csv(accu_file, index=False) 
     else:
-        output.to_csv(accu_dir + filename, mode='a', index=False, header=False)  
+        output.to_csv(accu_file, mode='a', index=False, header=False)  
     return    
