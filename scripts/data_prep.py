@@ -51,9 +51,6 @@ def get_season(y,fft_len=1024,figs=False):
     Pxx_den = np.abs(Pxx_den)
     season_ind = round(fft_len/Pxx_den.argmax())
     print('Season index {}'.format(season_ind))
-    if figs:
-        plt.figure();plt.semilogy(f, Pxx_den)
-#         plt.plot(Pxx_den.argmax(),1,'r--')
     return int(season_ind)
 
 def hist_win(y,win):
@@ -68,7 +65,7 @@ def prepdata_append():
 
 def prepdata(csv_path):
     
-    df = pd.read_csv(csv_path, header=1)
+    df = pd.read_csv(csv_path, header=1, na_values='X')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
         #df.set_index(['DATE'], inplace=True)
 

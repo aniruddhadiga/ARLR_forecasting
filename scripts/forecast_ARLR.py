@@ -34,7 +34,7 @@ from scipy import signal
 from statsmodels.tsa.stattools import adfuller
 from data_prep import data_read_and_prep, get_season, prepdata
 from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution, accu_output
-
+import pkg_resources
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -93,7 +93,7 @@ def get_bin():
 
 def ARLR_module(df, region, target, epi_week, fct_weeks):
     config = configparser.ConfigParser()
-    config_file = 'config.ini'
+    config_file = pkg_resources.resource_filename(__name__, 'config.ini')
     config.read(config_file) 
     ews_train = epi_week-1
     ews_test = epi_week   
@@ -113,9 +113,6 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     train.index = df_train['DATE']
     test = pd.Series(test)
     test.index = df_test['DATE']
-    config = configparser.ConfigParser()
-    config_file = 'config.ini'  
-    config.read(config_file)
     # Multi-step forecast
     
     
@@ -261,7 +258,8 @@ def main():
     
     csv_path = args.ground_truth
     fdf = prepdata(csv_path)
-    fdf = fdf.drop(fdf[(fdf['REGION'] == 'Florida') | (fdf['REGION'] == 'Puerto Rico')|(fdf['REGION'] == 'Virgin Islands')|(fdf['REGION'] == 'New York City')].index)
+    fdf.dropna(subset=['%UNWEIGHTED ILI'],inplace=True)
+    fdf = fdf.drop(fdf[(fdf['REGION'] == 'Puerto Rico')|(fdf['REGION'] == 'Virgin Islands')|(fdf['REGION'] == 'New York City')].index)
     
     if int(args.test):
         directory = 'dump/'
