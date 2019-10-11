@@ -202,7 +202,7 @@ def parse_args():
                     help='CSV format output file of county predictions')
     ap.add_argument('--ground_truth', required=False,
                     help='CSV file ("|") from CDC of state ILI levels')
-    ap.add_argument('--region_type', required=True,
+    ap.add_argument('--region_type', required=False,
                     help='national, 1, 2,...,10, state')
     ap.add_argument('--st_fips', required=False,
                     help='file of state fips and names')
@@ -249,8 +249,8 @@ def main():
     targets = get_targets()
     #if args.region not in regions:
     #    raise TypeError("region is not valid")
-    if args.region_type == "national":
-        args.region_type = "US National"
+    #if args.region_type == "national":
+    #    args.region_type = "US National"
     fct_weeks = args.weeks
     # 
 
@@ -258,11 +258,7 @@ def main():
     startweek = args.forecast_from[6:8]
     trainweek = startweek
     ews = epi.Week(int(startyear), int(startweek))
-    region_type = args.region_type
-    if args.region_type=='US National' or args.region_type.isdigit():
-        target = targets["wili"]
-    else:
-        target = targets["ili"]
+    
     csv_path = args.ground_truth
     fdf = prepdata(csv_path)
     fdf = fdf.drop(fdf[(fdf['REGION'] == 'Florida') | (fdf['REGION'] == 'Puerto Rico')|(fdf['REGION'] == 'Virgin Islands')|(fdf['REGION'] == 'New York City')].index)
@@ -280,6 +276,10 @@ def main():
     
     for region in fdf['REGION'].unique():
         #for i in range(0, 1):
+        if region=='US National' or region.isdigit():
+            target = targets["wili"]
+        else:
+            target = targets["ili"]
         df = fdf[fdf['REGION']==region]       
         predictions, bn_mat = ARLR_module(df, region, target, ews, fct_weeks)
         if int(args.CDC):
