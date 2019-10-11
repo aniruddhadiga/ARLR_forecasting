@@ -60,9 +60,33 @@ def hist_win(y,win):
     y_hist = y[(-win-1):-1]
     return y_hist
 
-def prepdata():
+def prepdata_append():
     national = pd.read_csv('data/national/ILINet.csv', header=1)
     regional = national.append(pd.read_csv('data/regional/ILINet.csv', header=1))
     df = regional.append(pd.read_csv('data/state/ILINet.csv', header=1))
     return df
 
+def prepdata(csv_path):
+    
+    df = pd.read_csv(csv_path, header=1)
+    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+        #df.set_index(['DATE'], inplace=True)
+
+    #if region == 'US National':
+    #    df = cdcdf[cdcdf['REGION TYPE']=='National']
+    #    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+    #    #df.set_index(['DATE'], inplace=True)
+
+    #elif region.isdigit():
+    #    df = cdcdf[cdcdf['REGION']== "Region " + str(region)]
+    #    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+    #    #df.set_index(['DATE'], inplace=True)
+
+    #    #When I set the date row as the index, I can no longer access it using df['DATE]
+    #else:
+    #    df = cdcdf[cdcdf['REGION']==region]
+    #    
+    #    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+        #df.set_index(['DATE'], inplace=True)
+
+    return df
