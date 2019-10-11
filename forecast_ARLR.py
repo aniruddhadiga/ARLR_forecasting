@@ -1,3 +1,6 @@
+__version__='1.0.0'
+__processor__='forecast_ARLR'
+
 import sys
 import os
 import pandas as pd
@@ -30,7 +33,13 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 from data_prep import data_read_and_prep, get_season, prepdata
-from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution
+from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution, accu_output
+
+import warnings
+warnings.filterwarnings('ignore')
+
+import logging
+log = logging.getLogger(__processor__)
 
 def national():
     cdcdf = pd.read_csv('data/national/ILINet.csv', header=1)
@@ -68,50 +77,30 @@ def state(name):
         #df.drop(["YEAR", "WEEK"], axis = 1, inplace = True)
     
     return dfs[name]
-regions = {"national": national, "1": region, "2": region, "3": region, "4": region, "5": region, "6": region, "7": region, "8": region, "9": region, "10": region, "Alabama": state, "Alaska": state, "Arizona": state, "Arkansas": state, "California": state, "Colorado": state, "Connecticut": state, "Delaware": state, "Georgia": state, "Hawaii": state, "Idaho": state, "Illinois": state, "Indiana": state, "Iowa": state, "Kansas": state, "Kentucky": state, "Louisiana": state, "Maine": state, "Maryland": state, "Massachusetts": state, "Michigan": state, "Minnesota": state, "Mississippi": state, "Missouri": state, "Montana": state, "Nebraska": state, "Nevada": state, "New Hampshire": state, "New Jersey": state, "New Mexico": state, "New York": state, "North Carolina": state, "North Dakota": state, "Ohio": state, "Oklahoma": state, "Oregon": state, "Pennsylvania": state, "Rhode Island": state, "South Carolina": state, "South Dakota": state, "Tennessee": state, "Texas": state, "Utah": state, "Vermont": state, "Virginia": state, "Washington": state, "West Virginia": state, "Wisconsin": state, "Wyoming": state}
 
+def get_regions():
+    regions = {"national": national, "1": region, "2": region, "3": region, "4": region, "5": region, "6": region, "7": region, "8": region, "9": region, "10": region, "Alabama": state, "Alaska": state, "Arizona": state, "Arkansas": state, "California": state, "Colorado": state, "Connecticut": state, "Delaware": state, "Georgia": state, "Hawaii": state, "Idaho": state, "Illinois": state, "Indiana": state, "Iowa": state, "Kansas": state, "Kentucky": state, "Louisiana": state, "Maine": state, "Maryland": state, "Massachusetts": state, "Michigan": state, "Minnesota": state, "Mississippi": state, "Missouri": state, "Montana": state, "Nebraska": state, "Nevada": state, "New Hampshire": state, "New Jersey": state, "New Mexico": state, "New York": state, "North Carolina": state, "North Dakota": state, "Ohio": state, "Oklahoma": state, "Oregon": state, "Pennsylvania": state, "Rhode Island": state, "South Carolina": state, "South Dakota": state, "Tennessee": state, "Texas": state, "Utah": state, "Vermont": state, "Virginia": state, "Washington": state, "West Virginia": state, "Wisconsin": state, "Wyoming": state}
+    return regions
 
-targets = {"wili": "% WEIGHTED ILI", "ili": "%UNWEIGHTED ILI", "ilitotal": "ILITOTAL", "totalpatients": "TOTAL PATIENTS"} #onset and peak week still need to be added
+def get_targets():
+    targets = {"wili": "% WEIGHTED ILI", "ili": "%UNWEIGHTED ILI", "ilitotal": "ILITOTAL", "totalpatients": "TOTAL PATIENTS"} #onset and peak week still need to be added
+    return targets
 
+def get_bin():    
+    bin_ed= [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 9.0, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 10.0, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 12.0, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 13.0, 100]
+    return bin_ed
+ 
 
-
-def ARLR_module(df, region, target, epi_week):
+def ARLR_module(df, region, target, epi_week, fct_weeks):
     config = configparser.ConfigParser()
     config_file = 'config.ini'
     config.read(config_file) 
-    ww_train = epi_week-1
-    ww_test = epi_week   
-    cdcdf = df
-    #df[target] = df[target].convert_objects(convert_numeric=True)
-    #df[target] = df[target].replace(0,1e-2)
-    #df[target].dropna()
-    starttraining_date = pd.to_datetime(ww_train.startdate())
-    testing_date = pd.to_datetime(ww_test.startdate())
-    #endtraining = pd.to_datetime(enddate.startdate())
-    #startpredict = pd.to_datetime((enddate+1).startdate())
-    #endpredict = pd.to_datetime((enddate+4).startdate())
-    
-    if region == 'US National':
-        df = cdcdf[cdcdf['REGION TYPE']=='National']
-        df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
-        #df.set_index(['DATE'], inplace=True)
-
-    elif region.isdigit():
-        df = cdcdf[cdcdf['REGION']== "Region " + str(region)]
-        df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
-        #df.set_index(['DATE'], inplace=True)
-
-        #When I set the date row as the index, I can no longer access it using df['DATE]
-    else:
-        df = cdcdf[cdcdf['REGION']==region]
-        
-        df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
-        #df.set_index(['DATE'], inplace=True)
-    
-    df_train = df[(df['DATE']<pd.to_datetime(ww_train.startdate()))]
+    ews_train = epi_week-1
+    ews_test = epi_week   
+    df_train = df[(df['DATE']<=pd.to_datetime(ews_train.startdate()))]
     df_train[target] = np.array(df_train[target],float)
-    df_train[target] = df_train[target].replace(0,1e-2)
-    df_test = df[(df['DATE']>=pd.to_datetime(ww_train.startdate()))]
+    df_train[target] = df_train[target].replace(0,1e-2) # check if zeros are there in ILI data as we take log
+    df_test = df[(df['DATE']>=pd.to_datetime(ews_train.startdate()))]
     df_test[target] = np.array(df_test[target],float)
     df_test[target] = df_test[target].replace(0,1e-2)
     #targetdf = Series(df[target])
@@ -133,7 +122,7 @@ def ARLR_module(df, region, target, epi_week):
     win = int(config['Forecasting']['win']) # Length of the historial training data to be considered
     
     fut_wks = int(config['Forecasting']['fut_wks']) # Number of weeks ahead to forecast from training data 
-    ms_fct = int(config['Forecasting']['ms_fct']) # For every forecast week, give additional ms_fct weeks forecast
+    ms_fct = fct_weeks # For every forecast week, give additional ms_fct weeks forecast
     
     test_win = fut_wks+ms_fct # Number of true value to be fetched (testing accuracy)
     exp_max_lags =  int(config['Forecasting']['exp_max_lags'])# expected maximum lags to be considered in the model
@@ -147,7 +136,8 @@ def ARLR_module(df, region, target, epi_week):
     
     #bin_ed = np.arange(0,n_bins,.1)
     #bin_ed = np.append(bin_ed,20)
-    bin_ed= [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 9.0, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 10.0, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 12.0, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 13.0, 100]
+    bin_ed = get_bin()
+    
     # Read csv file and create train and test data
     # dates = pd.DatetimeIndex(df_train["DATE"])
     #plt.figure(figsize=(12,7))
@@ -199,70 +189,109 @@ def ARLR_module(df, region, target, epi_week):
     
     return np.exp(yp_fct), bn_mat
 
-def main(args):
-    #parser = argparse.ArgumentParser(description='Script that runs an autoregressive forecasting model upon available CDC flu data.')
-    #parser.add_argument('REGION', help='Region selector. Valid regions are "national", regions "1" - "10", or any state, e.g. "Alabama", "Michigan"')
-    #parser.add_argument('TARGET', help='Target to forecast upon. Valid targets are Weighted ILI ("wili"), Unweighted ILI ("ili"), ILI Total ("ilitotal"), or Total Patients ("totalpatients")')
-    #parser.add_argument('STARTDATE', help='Year in which the model will start training, formatted as "2018EW05".')
-    #parser.add_argument('ENDDATE', help='Date at which the model will stop training, formatted as "2018EW05".')
-    #args = parser.parse_args()
-    #args = vars(args) 
-    if args["REGION"] not in regions:
-        raise TypeError("REGION is not valid")
+def parse_args():
+    ap = argparse.ArgumentParser(description='ARLR forecasting method for'
+                                 ' state ILI.')
+    ap.add_argument('-b', '--forecast_from', required=True,
+                    help='a date EW format indicating first week to predict.')
+    ap.add_argument('-w', '--weeks', required=True, type=int,
+                    help='number of weeks to predict')
+    ap.add_argument('--out_state', required=False,
+                    help='CSV format output file of state predictions')
+    ap.add_argument('--out_county', required=False,
+                    help='CSV format output file of county predictions')
+    ap.add_argument('--ground_truth', required=False,
+                    help='CSV file ("|") from CDC of state ILI levels')
+    ap.add_argument('--region_type', required=True,
+                    help='national, 1, 2,...,10, state')
+    ap.add_argument('--st_fips', required=False,
+                    help='file of state fips and names')
+    ap.add_argument('--county_ids', required=False,
+                    help='file of all county 5-digit fips')
+    ap.add_argument('--end_date', required=False,
+                    help='date (yyyymmdd) of last ground truth data point')
+    ap.add_argument('--unc', required=True, default=1,
+                    help='unc=0 means no uncertainty binning, unc=1')
+    ap.add_argument('--test', required=False, default=0,
+                    help='test mode, dumps the predictions in folder dump')
+    ap.add_argument('-v', '--verbose',
+                    help='verbose logging', action='store_true')
+    ap.add_argument('-l', '--log', default=None,
+                    help='log file, by default logs are written to'
+                    ' standard output')
 
-    if args["REGION"] == "national":
-        args["REGION"] = "US National"
-    
+    return ap.parse_args()
 
-    if args["TARGET"] not in targets:
-        raise TypeError("TARGET is not valid")
 
-    if re.fullmatch('\d{4}(EW)\d{2}', args["STARTDATE"]) is None:
-        raise TypeError("STARTDATE is formatted incorrectly")
+def main():
+    args = parse_args()
     
-    if re.fullmatch('\d{4}(EW)\d{2}', args["ENDDATE"]) is None:
-        raise TypeError("ENDDATE is formatted incorrectly")
+    level = logging.INFO
+    if args.verbose:
+        level = logging.DEBUG
+    log.setLevel(level)
+
+    if args.log is None:
+        handler = logging.StreamHandler()
+    else:
+        handler = logging.FileHandler(args.log)
+
+    log_formatter = logging.Formatter('%(asctime)s:%(levelname)s:'
+                                      '%(name)s.%(funcName)s:%(message)s',
+                                      datefmt='%Y%m%d-%H%M%S')
+    handler.setFormatter(log_formatter)
+    log.addHandler(handler)
+
+    log.info('{} v{}'.format(__processor__,__version__))    
     
-    bin_ed= [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 9.0, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 10.0, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 12.0, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 13.0, 100]
-   
- 
-    startyear = args["STARTDATE"][:4]
-    startweek = args["STARTDATE"][6:8]
+    
+    regions = get_regions()
+    targets = get_targets()
+    #if args.region not in regions:
+    #    raise TypeError("region is not valid")
+    if args.region_type == "national":
+        args.region_type = "US National"
+    fct_weeks = args.weeks
+    # 
+
+    startyear = args.forecast_from[:4]
+    startweek = args.forecast_from[6:8]
     trainweek = startweek
-    ww = epi.Week(int(startyear), int(startweek))
-    region = args["REGION"]
-    print(region)
-    if region=='US National' or region.isdigit():
+    ews = epi.Week(int(startyear), int(startweek))
+    region_type = args.region_type
+    if args.region_type=='US National' or args.region_type.isdigit():
         target = targets["wili"]
     else:
         target = targets["ili"]
-    df = prepdata()
-    df = df.drop(df[df['REGION'] == 'Florida'].index)
-    directory = 'output/' + str(ww.year) + '/'
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    for i in range(0, 40):
-        predictions, bn_mat = ARLR_module(df, region, target, ww+i)
-        #pdb.set_trace()
-        outputdistribution(predictions.reshape(4), bn_mat.reshape([131,4]), bin_ed, region, target, directory, ww+i)
-
+    csv_path = args.ground_truth
+    fdf = prepdata(csv_path)
+    fdf = fdf.drop(fdf[(fdf['REGION'] == 'Florida') | (fdf['REGION'] == 'Puerto Rico')|(fdf['REGION'] == 'Virgin Islands')|(fdf['REGION'] == 'New York City')].index)
+    
+    if int(args.test):
+        directory = 'dump/'
+        if not os.path.exists(directory):
+            os.makedirs(directory) 
+        
+    else:
+        directory = 'output/' + ARLR + '/'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+    bin_ed = get_bin() 
+    
+    for region in fdf['REGION'].unique():
+        #for i in range(0, 1):
+        df = fdf[fdf['REGION']==region]       
+        predictions, bn_mat = ARLR_module(df, region, target, ews, fct_weeks)
+        if int(args.unc):
+            outputdistribution(predictions[0:4].reshape(4), bn_mat[0:4,:].reshape([131,4]), bin_ed, region, target, directory, ews)
+        if df['REGION TYPE'].unique() == 'States':
+            print(region)
+            accu_output(predictions.reshape(4), region,  args.out_state, ews, args.st_fips)
 if __name__ == "__main__":
-#    
-#    parser = argparse.ArgumentParser(description='Script that runs an autoregressive forecasting model upon available CDC flu data.')
-#    parser.add_argument('REGION', help='Region selector. Valid regions are "national", regions "1" - "10", or any state, e.g. "Alabama", "Michigan"')
-#    parser.add_argument('TARGET', help='Target to forecast upon. Valid targets are Weighted ILI ("wili"), Unweighted ILI ("ili"), ILI Total ("ilitotal"), or Total Patients ("totalpatients")')
-#    parser.add_argument('STARTDATE', help='Year in which the model will start training, formatted as "2018EW05".')
-#    parser.add_argument('ENDDATE', help='Date at which the model will stop training, formatted as "2018EW05".')
-#    parser.add_argument('--sigma', default=.5, help="Standard deviation with which to apply normal distribution", type=float)
-#    parser.add_argument('--distribution', action='store_true', default=False, 
-#    help='Specifies whether to return the predictions as a normal distribution')
-#
-#    args = parser.parse_args()
-#    main(vars(args))
-
+    main()
 # Multi-step forecast
-    for key in regions.keys():
-        if key=='Florida':
-            continue
-        else:
-            main({"REGION": key, "TARGET": "ili", "STARTDATE": "2017EW40", "ENDDATE": "2016EW39"})
+#    for key in regions.keys():
+#        if key=='Florida':
+#            continue
+#        else:
+#            main({"REGION": key, "TARGET": "ili", "STARTDATE": "2017EW40", "ENDDATE": "2016EW39"})

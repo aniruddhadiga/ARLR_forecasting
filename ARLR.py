@@ -5,6 +5,8 @@ import statsmodels.api as sm
 #import matplotlib.pyplot as plt
 import pandas as pd
 import pdb, os
+from aw_micro import cdc_data
+import datetime
 # ARLR functions
 def ARLR_aug_phase(train,lags,win,llr_tol=1e-2):
     y = np.flip(train)
@@ -253,13 +255,28 @@ def outputdistribution(predictions,bn_mat, bins, region, target, directory, epi_
             
             
             output = output.append(df)
-    
         #pdb.set_trace()
     #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
-
-    filename = 'EW' + str(epi_wk.week) + '_ARLR_' + str(epi_wk.startdate()) + '.csv'
+    filename = 'EW' +'{:02}'.format(epi_wk.week) + '_ARLR_' + str(epi_wk.startdate()) + '.csv'
     if not os.path.isfile(directory+filename):
         output.to_csv(directory + filename, index=False) 
     else:
         output.to_csv(directory + filename, mode='a', index=False, header=False)  
     return
+    
+def accu_output(predictions, region, accu_dir, ews, st_fips_path):
+    df_s = pd.read_csv(st_fips_path)
+    st_fips_val = df_s[df_s['state_name']==region]['state']
+    pred_state = []
+    output = pd.DataFrame(columns=['date', 'area_id', 'ili'])
+    for i in range(predictions.shape[0]):
+        prediction_date = cdc_data.ew2date(ews.year,ews.week+i)
+        pred_state.append({'date':prediction_date.isoformat(),'area_id':'{:02}'.format(st_fips_val.values[0]),'ili':predictions[i]})
+        df_state = pd.DataFrame(pred_state)
+    output=output.append(df_state)
+    filename = 'prediction-'+prediction_date.strftime('%Y%m%d')+'-state-level.csv'
+    if not os.path.isfile(accu_dir+filename):
+        output.to_csv(accu_dir + filename, index=False) 
+    else:
+        output.to_csv(accu_dir + filename, mode='a', index=False, header=False)  
+    return    
