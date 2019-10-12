@@ -61,7 +61,7 @@ def prepdata_append():
 
 def prepdata(csv_path):
     
-    df = pd.read_csv(csv_path, header=1, na_values='X')
+    df = pd.read_csv(csv_path, na_values='X')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
         #df.set_index(['DATE'], inplace=True)
 

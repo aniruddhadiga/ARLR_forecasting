@@ -162,7 +162,7 @@ def fct_uncert(train, pred_err,coeffs, lags_app, win, Nb=1000):
 #     pdb.set_trace()
     return yb_fct
 
-def uncer_scr(yb_fct, yp_fct, ms_fct, N_b, bin_ed):
+def uncer_scr(yb_fct, yp_fct, ms_fct, N_b, bin_ed,alp=1e-5):
     '''Puts the bootstrap samples provided by fct_uncert function into bins with bin edges given by bin_ed'''
 #     be = np.arange(0,n_bins,.1)
 #     be = np.append(be,20)
@@ -173,15 +173,26 @@ def uncer_scr(yb_fct, yp_fct, ms_fct, N_b, bin_ed):
     bn = np.histogram(np.exp(yb_fct[:]),bins=bin_ed)# plt.plot(y_obs)
     probs = dict(zip(np.round(bn[1],1),bn[0]/N_b))
     #log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
-    bn_mat = bn[0]/N_b
+    bn_mat = (1-alp)*bn[0]/N_b+alp
     return log_scr, bn_mat
+
+def uncer_Gaussker(yp_fct, ms_fct, pred_err, bin_ed, alp=1e-5):
+    '''Puts the bootstrap samples provided by fct_uncert function into bins with bin edges given by bin_ed'''
+    std_err = np.std(pred_err)
+    bn_mat = np.exp(-((bin_ed[1:]-np.exp(yp_fct))/std_err)**2)
+#         plt.subplot(ms_fct,1,i+1)
+    #log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
+    bn_mat = (1-alp)*bn_mat/np.sum(bn_mat)+(alp)
+    return bn_mat
+
 
 def multi_step_fct(data_frame, coeffs, lags_app, train_pred_err, ms_fct, win, Nb, bin_ed, uncer_anl=False):
     '''Using the data_frame, returns 1, 2,... ms_fct-week ahead forecast and also provides the uncertainty in estimation using bootstrap method if uncer_anl=True'''
     yp_fct=np.zeros(ms_fct)
     yb_fct=np.zeros([ms_fct,Nb])
     log_scr = np.zeros(ms_fct)
-    bn_mat = np.zeros([len(bin_ed)-1, ms_fct])
+    bn_mat_bst = np.zeros([len(bin_ed)-1, ms_fct])
+    bn_mat_Gaussker = np.zeros([len(bin_ed)-1, ms_fct])
     for wks in range(1,ms_fct+1):
 #         pdb.set_trace()
         yp_fct[wks-1],  err = ARLR_fct(coeffs[wks-1,:],data_frame,lags_app[wks-1,:],1, wks)
@@ -191,11 +202,81 @@ def multi_step_fct(data_frame, coeffs, lags_app, train_pred_err, ms_fct, win, Nb
         if uncer_anl:
 #             pdb.set_trace()
             yb_fct[wks-1,:] = fct_uncert(data_frame, train_pred_err[wks-1,:],coeffs[wks-1,:],lags_app[wks-1,:], win, Nb)
-            log_scr[wks-1], bn_mat[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed)
+            log_scr[wks-1], bn_mat_bst[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed,1e-5)
+            bn_mat_Gaussker[:, wks-1] = uncer_Gaussker(yp_fct[wks-1], ms_fct,train_pred_err[wks-1,:], bin_ed, 1e-5)
         print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks, np.exp(yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
-    return yp_fct, yb_fct, log_scr, bn_mat, train_pred_err
+    return yp_fct, yb_fct, log_scr, bn_mat_bst.reshape([131,4]), bn_mat_Gaussker.reshape([131,4]), train_pred_err
 
-def outputdistribution(predictions,bn_mat, bins, region, target, directory, epi_wk):
+def outputdistribution_bst(predictions,bn_mat, bins, region, target, directory, epi_wk):
+    output = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    df2 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    df3 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    df4 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+    
+    if region.isdigit():
+        df2.loc[0] = ["HHS Region " + region, "Season onset", "Bin", "week", "none", "none", 0.029411765]
+    else:
+        df2.loc[0] = [region,"Season onset", "Bin", "week", "none", "none", 0.029411765]
+
+    for i in range(40,53):
+        if region.isdigit():
+            df2.loc[i-39] = ["HHS Region " + region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+        else:
+            df2.loc[i-39] = [region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+    for i in range(1, 21):
+        if region.isdigit():
+            df2.loc[i+14] = ["HHS Region " + region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
+        else:
+            df2.loc[i+14] = [region, "Season onset", "Bin", "week", i, i+1, .0765]
+
+    for i in range(40, 53):
+        if region.isdigit():
+            df3.loc[i-40] = ["HHS Region " + region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+        else:
+            df3.loc[i-40] = [region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+    for i in range(1, 21):
+        if region.isdigit():
+            df3.loc[i+13] = ["HHS Region " + region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+        else:
+            df3.loc[i+13] = [region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
+    for i in range(bn_mat.shape[0]):
+        if region.isdigit():
+            df4.loc[i+1] = ["HHS Region " + region, "Season peak percentage", "Bin", "percent", bins[i], bins[i+1], 0.007633588]
+        else:
+            df4.loc[i+1] = [region, "Season peak percentage", "Bin", "percent", bins[i], bins[i+1], 0.007633588]
+
+    output = output.append(df2)
+    output = output.append(df3)
+    output = output.append(df4)
+
+    for i in range(predictions.shape[0]):
+            df = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
+            hist = bn_mat[:,i]
+            if region.isdigit():
+                df.loc[0] = ["HHS Region " + region, str(i+1) + " wk ahead", "Point", "percent","","", predictions[i]]
+            else:
+                df.loc[0] = [region, str(i+1) + " wk ahead", "Point", "percent","","", predictions[i]]
+    
+            
+            for j in range(hist.shape[0]):
+                if region.isdigit():
+                    df.loc[j+1] = ["HHS Region " + region, str(i+1) + " wk ahead", "Bin", "percent", bins[j], bins[j+1], hist[j]/10]
+                else:
+                    df.loc[j+1] = [region, str(i+1) + " wk ahead", "Bin", "percent", bins[j], bins[j+1], hist[j]/10]
+            
+            
+            output = output.append(df)
+        #pdb.set_trace()
+    #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
+    filename = 'EW' +'{:02}'.format(epi_wk.week) + '_ARLR_bst_' + str(epi_wk.startdate()) + '.csv'
+    filepath = os.path.join(directory,filename)
+    if not os.path.isfile(filepath):
+        output.to_csv(filepath, index=False) 
+    else:
+        output.to_csv(filepath, mode='a', index=False, header=False)  
+    return
+
+def outputdistribution_Gaussker(predictions,bn_mat, bins, region, target, directory, epi_wk):
     output = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
     df2 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
     df3 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
@@ -255,13 +336,13 @@ def outputdistribution(predictions,bn_mat, bins, region, target, directory, epi_
             
             
             output = output.append(df)
-        #pdb.set_trace()
     #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
-    filename = 'EW' +'{:02}'.format(epi_wk.week) + '_ARLR_' + str(epi_wk.startdate()) + '.csv'
-    if not os.path.isfile(directory+filename):
-        output.to_csv(directory + filename, index=False) 
+    filename = 'EW' +'{:02}'.format(epi_wk.week) + '_ARLR_Gaussker_' + str(epi_wk.startdate()) + '.csv'
+    filepath = os.path.join(directory,filename)
+    if not os.path.isfile(filepath):
+        output.to_csv(filepath, index=False) 
     else:
-        output.to_csv(directory + filename, mode='a', index=False, header=False)  
+        output.to_csv(filepath, mode='a', index=False, header=False)  
     return
     
 def accu_output(predictions, region, accu_file, ews, st_fips_path):

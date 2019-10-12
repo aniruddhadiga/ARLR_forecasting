@@ -22,8 +22,6 @@ from pandas import Series
 from datetime import date, time, datetime, timedelta
 
 from statsmodels.tsa.ar_model import AR
-from statsmodels.tsa.arima_model import ARMA
-from statsmodels.tsa.arima_model import ARIMA
 
 from sklearn.metrics import mean_squared_error
 
@@ -33,7 +31,7 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 from data_prep import data_read_and_prep, get_season, prepdata
-from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution, accu_output
+from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution_bst, outputdistribution_Gaussker,accu_output
 import pkg_resources
 import warnings
 warnings.filterwarnings('ignore')
@@ -154,7 +152,7 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     # Check seasonality
     #season_ind = get_season(train_win,fft_len=1024,figs=False)
     # train the model
-    max_lags = 55
+    max_lags = 108
     coeffs=np.zeros([ms_fct,max_lags])
     train_pred_err=np.zeros([ms_fct, win])
     yp_train=np.zeros([ms_fct, win]) 
@@ -168,11 +166,11 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
         coeffs_temp, yp_train[wks-1,:], tr_tp1, llr1, train_pred_err[wks-1,:], lags_temp = ARLR_model(train,allw_lags,win,llr_tol)
         lags_app[wks-1,lags_temp] = lags_temp
         coeffs[wks-1,:] = coeffs_temp
-    
     yp_fct=np.zeros([fut_wks,ms_fct])
     yb_fct=np.zeros([fut_wks,ms_fct,Nb])
     log_scr = np.zeros([fut_wks, ms_fct])
-    bn_mat = np.zeros([fut_wks, len(bin_ed)-1, ms_fct])
+    bn_mat_bst = np.zeros([fut_wks, len(bin_ed)-1, ms_fct])
+    bn_mat_Gaussker = np.zeros([fut_wks, len(bin_ed)-1, ms_fct])
     # Once trained, use the coeffs to forecast multi-steps given data frame
     
     # For obtaining uncertainty in forecast estimates (using Boot strapping), choose uncer_anl = True,  
@@ -181,14 +179,14 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     for new_wks in np.arange(0,fut_wks):
         data_frame = data_frame.append(test[new_wks:(new_wks+1)])
         data_test = data_test[1:]
-        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat[new_wks, :,:], train_pred_err = multi_step_fct(data_frame, coeffs, lags_app, train_pred_err, ms_fct, win, Nb, bin_ed, uncer_anl)
+        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker, train_pred_err = multi_step_fct(data_frame, coeffs, lags_app, train_pred_err, ms_fct, win, Nb, bin_ed, uncer_anl)
     
-    return np.exp(yp_fct), bn_mat
+    return np.exp(yp_fct), bn_mat_bst, bn_mat_Gaussker
 
 def parse_args():
     ap = argparse.ArgumentParser(description='ARLR forecasting method for'
                                  ' state ILI.')
-    ap.add_argument('-b', '--forecast_from', required=True,
+    ap.add_argument('-b', '--forecast_from', required=False,
                     help='a date EW format indicating first week to predict.')
     ap.add_argument('-w', '--weeks', required=True, type=int,
                     help='number of weeks to predict')
@@ -249,14 +247,12 @@ def main():
     #    args.region_type = "US National"
     fct_weeks = args.weeks
     # 
-
-    startyear = args.forecast_from[:4]
-    startweek = args.forecast_from[6:8]
-    trainweek = startweek
-    ews = epi.Week(int(startyear), int(startweek))
+    
+    
     
     csv_path = args.ground_truth
     fdf = prepdata(csv_path)
+    fdf['REGION'] = fdf['REGION'].fillna('National')
     fdf.dropna(subset=['%UNWEIGHTED ILI'],inplace=True)
     fdf = fdf.drop(fdf[(fdf['REGION'] == 'Puerto Rico')|(fdf['REGION'] == 'Virgin Islands')|(fdf['REGION'] == 'New York City')].index)
     
@@ -265,25 +261,35 @@ def main():
         if not os.path.exists(directory):
             os.makedirs(directory) 
         
-    else:
-        directory = 'output/' + ARLR + '/'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-    bin_ed = get_bin() 
     
-    for region in fdf['REGION'].unique():
-        #for i in range(0, 1):
-        if region=='US National' or region.isdigit():
-            target = targets["wili"]
-        else:
-            target = targets["ili"]
-        df = fdf[fdf['REGION']==region]       
-        predictions, bn_mat = ARLR_module(df, region, target, ews, fct_weeks)
-        if int(args.CDC):
-            outputdistribution(predictions[0,0:4], bn_mat[0,:0:4], bin_ed, region, target, directory, ews)
-        if df['REGION TYPE'].unique() == 'States':
-            print(region)
-            accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
+    directory_bst = 'output/' + 'ARLR_bst/'
+    directory_Gaussker = 'output/' + 'ARLR_Gaussker'
+    if not os.path.exists(directory_bst):
+        os.makedirs(directory_bst)
+    if not os.path.exists(directory_Gaussker):
+        os.makedirs(directory_Gaussker)
+    bin_ed = get_bin() 
+    for wks in epi.Year(int(args.forecast_from)).iterweeks():
+        #startyear = wks[:4] #args.forecast_from[:4]
+        #startweek = wks[5:6] #args.forecast_from[6:8]
+        #trainweek = startweek
+        ews = wks#epi.Week(int(startyear), int(startweek))
+        for region in fdf['REGION'].unique():
+            #for i in range(0, 1):
+            #if region=='National' or 'HHS Regions':
+            #    target = targets["wili"]
+            #else:
+            #    target = targets["ili"]
+            target = targets['wili']
+            df = fdf[fdf['REGION']==region]       
+            predictions, bn_mat_bst, bn_mat_Gaussker = ARLR_module(df, region, target, ews, fct_weeks)
+            if int(args.CDC):
+                outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
+                outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+
+            if df['REGION TYPE'].unique() == 'States':
+                print(region)
+                accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
 if __name__ == "__main__":
     main()
 # Multi-step forecast
