@@ -251,6 +251,8 @@ def main():
     
     
     csv_path = args.ground_truth
+    
+    year = args.forecast_from
     fdf = prepdata(csv_path)
     fdf['REGION'] = fdf['REGION'].fillna('National')
     fdf.dropna(subset=['%UNWEIGHTED ILI'],inplace=True)
@@ -269,12 +271,21 @@ def main():
         os.makedirs(directory_bst)
     if not os.path.exists(directory_Gaussker):
         os.makedirs(directory_Gaussker)
-    bin_ed = get_bin() 
-    for wks in epi.Year(int(args.forecast_from)).iterweeks():
-        #startyear = wks[:4] #args.forecast_from[:4]
-        #startweek = wks[5:6] #args.forecast_from[6:8]
+    bin_ed = get_bin()
+    EWs = []
+    for y in range(int(year),2020):
+        for week in epi.Year(y).iterweeks():
+            w = int(str(week))
+            if (w<int(year+'40'))|(w>201920):
+                continue
+    #         print(w)
+            EWs.append(str(w)) 
+    pdb.set_trace()
+    for wks in EWs:#epi.Year(int(args.forecast_from)).iterweeks():
+        startyear = wks[:4] #args.forecast_from[:4]
+        startweek = wks[4:] #args.forecast_from[6:8]
         #trainweek = startweek
-        ews = wks#epi.Week(int(startyear), int(startweek))
+        ews = epi.Week(int(startyear), int(startweek))
         for region in fdf['REGION'].unique():
             #for i in range(0, 1):
             #if region=='National' or 'HHS Regions':

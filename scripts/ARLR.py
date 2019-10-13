@@ -179,7 +179,7 @@ def uncer_scr(yb_fct, yp_fct, ms_fct, N_b, bin_ed,alp=1e-5):
 def uncer_Gaussker(yp_fct, ms_fct, pred_err, bin_ed, alp=1e-5):
     '''Puts the bootstrap samples provided by fct_uncert function into bins with bin edges given by bin_ed'''
     std_err = np.std(pred_err)
-    bn_mat = np.exp(-((bin_ed[:-1]-np.exp(yp_fct))/std_err)**2)
+    bn_mat = np.exp(-((bin_ed[:-1]-np.exp(yp_fct))/(2*3*std_err))**2)
 #         plt.subplot(ms_fct,1,i+1)
     #log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
     bn_mat = (1-alp)*bn_mat/np.sum(bn_mat)+(alp)
@@ -268,7 +268,7 @@ def outputdistribution_bst(predictions,bn_mat, bins, region, target, directory, 
             output = output.append(df)
         #pdb.set_trace()
     #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
-    filename = 'EW' +'{:02}'.format(epi_wk.week) + '_ARLR_bst_' + str(epi_wk.startdate()) + '.csv'
+    filename = 'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-FluX_ARLR' +'.csv'
     filepath = os.path.join(directory,filename)
     if not os.path.isfile(filepath):
         output.to_csv(filepath, index=False) 
@@ -314,7 +314,8 @@ def outputdistribution_Gaussker(predictions,bn_mat, bins, region, target, direct
             
             output = output.append(df)
     #Location Target Type Unit Bin_start_incl Bin_end_notincl Value
-    filename = 'EW' +'{:02}'.format(epi_wk.week) + '_ARLR_Gaussker_' + str(epi_wk.startdate()) + '.csv'
+    filename = 'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-FluX_ARLR'+ '.csv'
+
     filepath = os.path.join(directory,filename)
     if not os.path.isfile(filepath):
         output.to_csv(filepath, index=False) 

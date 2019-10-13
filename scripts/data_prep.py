@@ -63,6 +63,17 @@ def prepdata(csv_path):
     
     df = pd.read_csv(csv_path, na_values='X')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+
+def prepdata_retro(csv_path,epwk):
+    nat_csv_file = csv_path + '/' +'national/'+'ILINet_National_' + epwk + '.csv'
+    df = pd.read_csv(nat_csv_file, na_values='X')
+    
+    hhs_csv_file = csv_path +'/'+'hhs/'+'ILINet_HHS_' + epwk + '.csv'
+    df = df.append(pd.read_csv(hhs_csv_file))
+    df['REGION'] = df['REGION'].fillna('National')
+    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+
+
         #df.set_index(['DATE'], inplace=True)
 
     #if region == 'US National':
