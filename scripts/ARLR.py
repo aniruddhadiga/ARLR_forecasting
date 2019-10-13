@@ -179,7 +179,7 @@ def uncer_scr(yb_fct, yp_fct, ms_fct, N_b, bin_ed,alp=1e-5):
 def uncer_Gaussker(yp_fct, ms_fct, pred_err, bin_ed, alp=1e-5):
     '''Puts the bootstrap samples provided by fct_uncert function into bins with bin edges given by bin_ed'''
     std_err = np.std(pred_err)
-    bn_mat = np.exp(-((bin_ed[1:]-np.exp(yp_fct))/std_err)**2)
+    bn_mat = np.exp(-((bin_ed[:-1]-np.exp(yp_fct))/std_err)**2)
 #         plt.subplot(ms_fct,1,i+1)
     #log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
     bn_mat = (1-alp)*bn_mat/np.sum(bn_mat)+(alp)

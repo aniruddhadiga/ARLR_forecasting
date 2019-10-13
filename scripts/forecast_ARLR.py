@@ -262,8 +262,9 @@ def main():
             os.makedirs(directory) 
         
     
-    directory_bst = 'output/' + 'ARLR_bst/'
-    directory_Gaussker = 'output/' + 'ARLR_Gaussker'
+    directory_bst = 'output/' + 'ARLR_bst/' + str(args.forecast_from)
+    directory_Gaussker = 'output/' + 'ARLR_Gaussker/' + str(args.forecast_from)
+
     if not os.path.exists(directory_bst):
         os.makedirs(directory_bst)
     if not os.path.exists(directory_Gaussker):
