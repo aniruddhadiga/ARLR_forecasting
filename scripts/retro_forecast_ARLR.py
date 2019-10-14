@@ -93,13 +93,13 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     config = configparser.ConfigParser()
     config_file = pkg_resources.resource_filename(__name__, 'config.ini')
     config.read(config_file) 
-    ews_train = epi_week-1
+    ews_train = epi_week
     ews_test = epi_week   
     df_train = df[(df['DATE']<=pd.to_datetime(ews_train.startdate()))]
-    df_train[target] = np.array(df_train[target],float)
+    df_train[target] = np.array(df_train[target].fillna(1e-2),float)
     df_train[target] = df_train[target].replace(0,1e-2) # check if zeros are there in ILI data as we take log
-    df_test = df[(df['DATE']>=pd.to_datetime(ews_train.startdate()))]
-    df_test[target] = np.array(df_test[target],float)
+    df_test = df[(df['DATE']>=pd.to_datetime(ews_test.startdate()))]
+    df_test[target] = np.array(df_test[target].fillna(1e-2),float)
     df_test[target] = df_test[target].replace(0,1e-2)
     #targetdf = Series(df[target])
     #target_series = targetdf[:starttraining_date]
@@ -213,6 +213,7 @@ def parse_args():
     ap.add_argument('-l', '--log', default=None,
                     help='log file, by default logs are written to'
                     ' standard output')
+    ap.add_argument('-o','--out_folder', required=True, help='CSV format output file of county predictions')
 
     return ap.parse_args()
 
@@ -251,15 +252,15 @@ def main():
     
     
     csv_path = args.ground_truth 
-    year = args.forecast_from
+    
     if int(args.test):
         directory = 'dump/'
     if not os.path.exists(directory):
         os.makedirs(directory) 
         
     
-    directory_bst = 'output/' + 'ARLR_bst/' + str(args.forecast_from)
-    directory_Gaussker = 'output/' + 'ARLR_Gaussker/' + str(args.forecast_from)
+    directory_bst = args.out_folder + 'ARLR_bst/' + str(args.forecast_from)
+    directory_Gaussker = args.out_folder + 'ARLR_Gaussker/' + str(args.forecast_from)
 
     if not os.path.exists(directory_bst):
         os.makedirs(directory_bst)
@@ -267,17 +268,19 @@ def main():
         os.makedirs(directory_Gaussker)
     bin_ed = get_bin()
     EWs = []
-    for y in range(int(year),2020):
+    year_f = args.forecast_from
+    year_t = str(int(year_f)+1)
+    EWs = []
+    for y in range(int(year_f),int(year_t)+1):
         for week in epi.Year(y).iterweeks():
+            
             w = int(str(week))
-            if (w<int(year+'40'))|(w>201920):
+            if (w<int(year_f+'40'))|(w>int(year_t+'20')):
                 continue
-    #         print(w)
             EWs.append(str(w)) 
     for wks in EWs:#epi.Year(int(args.forecast_from)).iterweeks():
         startyear = wks[:4] #args.forecast_from[:4]
         startweek = wks[4:] #args.forecast_from[6:8]
-        
         
         #trainweek = startweek
         fdf = prepdata_retro(csv_path,wks)
