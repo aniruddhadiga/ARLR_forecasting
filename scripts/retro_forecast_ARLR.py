@@ -31,7 +31,7 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 from data_prep import data_read_and_prep, get_season, prepdata, prepdata_retro
-from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution_bst, outputdistribution_Gaussker,accu_output
+from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution_bst, outputdistribution_Gaussker,accu_output, outputdistribution_fromtemplate
 import pkg_resources
 import warnings
 warnings.filterwarnings('ignore')
@@ -302,7 +302,9 @@ def main():
             predictions, bn_mat_bst, bn_mat_Gaussker = ARLR_module(df, region, target, ews, fct_weeks)
             if int(args.CDC):
                 outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
-                outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+                #outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+                outputdistribution_fromtemplate(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+
 
             if df['REGION TYPE'].unique() == 'States':
                 print(region)

@@ -344,27 +344,34 @@ def accu_output(predictions, region, accu_file, ews, st_fips_path):
     return
 
 def outputdistribution_fromtemplate(predictions,bn_mat, bins, region, target, directory, epi_wk):
-    pdb.set_trace()
-    tpl_path = '/project/biocomplexity/aniadiga/Forecasting/cdc-flusight-ensemble/model-forecasts/component-models/Delphi_Uniform'
-    if str(epi_wk.year) == '2014':
-        tpl_file = 'EW01-2014-Delphi_Uniform.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
-    else:
-        tpl_file = 'EW01-2011-Delphi_Uniform.csv'
-    
-    tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
-    for i in range(predictions.shape[0]):
-        targ_week = '{} wk ahead'.format(i+1)
-        mask1 = (tpl_df.Location=='US National')&(tpl_df.Target==targ_week)&(tpl_df.Type=='Point')
-        mask2 = (tpl_df.Location=='US National')&(tpl_df.Target==targ_week)&(tpl_df.Type=='Bin')
-        tpl_df.loc[mask1,'Value'] = predictions[i]
-        tpl_df.loc[mask2,'Value'] = bn_mat[:,i]
-    
+    if region=='National':
+        region = 'US National'
+    if (region[len(region)-1]).isdigit():
+        region = 'HHS ' + region
+
     filename = 'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-FluX_ARLR'+ '.csv'
 
     filepath = os.path.join(directory,filename)
     if not os.path.isfile(filepath):
+        tpl_path = '/project/biocomplexity/aniadiga/Forecasting/cdc-flusight-ensemble/model-forecasts/component-models/Delphi_Uniform'
+        if str(epi_wk.year) == '2014':
+            tpl_file = 'EW01-2014-Delphi_Uniform.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
+        else:
+            tpl_file = 'EW01-2011-Delphi_Uniform.csv'
+    
+        tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
         tpl_df.to_csv(filepath, index=False)
+        df = pd.read_csv(filepath)
     else:
-        tpl_df.to_csv(filepath, mode='a', index=False, header=False)
+        df = pd.read_csv(filepath)
+    
+    for i in range(predictions.shape[0]):
+        targ_week = '{} wk ahead'.format(i+1)
+        mask1 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Point')
+        mask2 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Bin')
+        df.loc[mask1,'Value'] = predictions[i]
+        df.loc[mask2,'Value'] = bn_mat[:,i]
+    
+    df.to_csv(filepath, mode='w', index=False)
     return
 
