@@ -69,7 +69,7 @@ def prepdata_retro(csv_path,epwk):
     df = pd.read_csv(nat_csv_file, na_values='X')
     
     hhs_csv_file = csv_path +'/'+'hhs/'+'ILINet_HHS_' + epwk + '.csv'
-    df = df.append(pd.read_csv(hhs_csv_file))
+    df = df.append(pd.read_csv(hhs_csv_file,na_values='X'))
     df['REGION'] = df['REGION'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
 

@@ -277,6 +277,10 @@ def outputdistribution_bst(predictions,bn_mat, bins, region, target, directory, 
     return
 
 def outputdistribution_Gaussker(predictions,bn_mat, bins, region, target, directory, epi_wk):
+    if region=='National':
+        region = 'US National'
+    if (region[len(region)-1]).isdigit():
+        region = 'HHS Region ' + region[len(region)-1]
     output = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
     df2 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
     df3 = pd.DataFrame(columns=['Location', 'Target', 'Type', 'Unit', 'Bin_start_incl', 'Bin_end_notincl', 'Value'])
@@ -288,7 +292,7 @@ def outputdistribution_Gaussker(predictions,bn_mat, bins, region, target, direct
         df2.loc[i-39] = [region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
     
     for i in range(1, 21):
-        df2.loc[i+14] = [region, "Season onset", "Bin", "week", i, i+1, .0765]
+        df2.loc[i+14] = [region, "Season onset", "Bin", "week", i, i+1, 0.029411765]
 
     for i in range(40, 53):
         df3.loc[i-40] = [region, "Season peak week", "Bin", "week", i, i+1, 0.03030303]
@@ -337,4 +341,30 @@ def accu_output(predictions, region, accu_file, ews, st_fips_path):
         output.to_csv(accu_file, index=False) 
     else:
         output.to_csv(accu_file, mode='a', index=False, header=False)  
-    return    
+    return
+
+def outputdistribution_fromtemplate(predictions,bn_mat, bins, region, target, directory, epi_wk):
+    pdb.set_trace()
+    tpl_path = '/project/biocomplexity/aniadiga/Forecasting/cdc-flusight-ensemble/model-forecasts/component-models/Delphi_Uniform'
+    if str(epi_wk.year) == '2014':
+        tpl_file = 'EW01-2014-Delphi_Uniform.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
+    else:
+        tpl_file = 'EW01-2011-Delphi_Uniform.csv'
+    
+    tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
+    for i in range(predictions.shape[0]):
+        targ_week = '{} wk ahead'.format(i+1)
+        mask1 = (tpl_df.Location=='US National')&(tpl_df.Target==targ_week)&(tpl_df.Type=='Point')
+        mask2 = (tpl_df.Location=='US National')&(tpl_df.Target==targ_week)&(tpl_df.Type=='Bin')
+        tpl_df.loc[mask1,'Value'] = predictions[i]
+        tpl_df.loc[mask2,'Value'] = bn_mat[:,i]
+    
+    filename = 'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-FluX_ARLR'+ '.csv'
+
+    filepath = os.path.join(directory,filename)
+    if not os.path.isfile(filepath):
+        tpl_df.to_csv(filepath, index=False)
+    else:
+        tpl_df.to_csv(filepath, mode='a', index=False, header=False)
+    return
+

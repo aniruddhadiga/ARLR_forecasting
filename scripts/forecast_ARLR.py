@@ -253,6 +253,7 @@ def main():
     csv_path = args.ground_truth
     
     year = args.forecast_from
+    pdb.set_trace()
     fdf = prepdata(csv_path)
     fdf['REGION'] = fdf['REGION'].fillna('National')
     fdf.dropna(subset=['%UNWEIGHTED ILI'],inplace=True)
