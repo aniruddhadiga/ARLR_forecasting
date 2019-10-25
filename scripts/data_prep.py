@@ -73,6 +73,15 @@ def prepdata_retro(csv_path,epwk):
     df['REGION'] = df['REGION'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
 
+def prepdata_flux(csv_path,epwk):
+    nat_csv_file = csv_path + '/'+'ILINet_national_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
+    df = pd.read_csv(nat_csv_file, na_values='X')
+    
+    hhs_csv_file = csv_path +'/'+ 'ILINet_hhs_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
+    df = df.append(pd.read_csv(hhs_csv_file,na_values='X'))
+    df['region'] = df['region'].fillna('National')
+    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
+
 
         #df.set_index(['DATE'], inplace=True)
 

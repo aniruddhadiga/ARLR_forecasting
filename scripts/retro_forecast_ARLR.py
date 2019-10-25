@@ -94,12 +94,12 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     config_file = pkg_resources.resource_filename(__name__, 'config.ini')
     config.read(config_file) 
     ews_train = epi_week
-    ews_test = epi_week   
+    ews_test = epi_week
     df_train = df[(df['DATE']<=pd.to_datetime(ews_train.startdate()))]
-    df_train[target] = np.array(df_train[target].fillna(1e-2),float)
+    df_train[target] = np.array(df_train[target].interpolate())
     df_train[target] = df_train[target].replace(0,1e-2) # check if zeros are there in ILI data as we take log
-    df_test = df[(df['DATE']>=pd.to_datetime(ews_test.startdate()))]
-    df_test[target] = np.array(df_test[target].fillna(1e-2),float)
+    df_test = df[(df['DATE']>pd.to_datetime(ews_test.startdate()))]
+    df_test[target] = np.array(df_test[target].fillna(method='ffill'))
     df_test[target] = df_test[target].replace(0,1e-2)
     #targetdf = Series(df[target])
     #target_series = targetdf[:starttraining_date]
@@ -177,7 +177,7 @@ def ARLR_module(df, region, target, epi_week, fct_weeks):
     data_frame = train
     data_test = []#test
     for new_wks in np.arange(0,fut_wks):
-        data_frame = data_frame.append(test[new_wks:(new_wks+1)])
+        #data_frame = data_frame.append(test[new_wks:(new_wks+1)])
         data_test = data_test[1:]
         yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker, train_pred_err = multi_step_fct(data_frame, coeffs, lags_app, train_pred_err, ms_fct, win, Nb, bin_ed, uncer_anl)
     

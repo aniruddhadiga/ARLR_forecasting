@@ -30,7 +30,7 @@ from scipy.stats.distributions import chi2
 from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
-from data_prep import data_read_and_prep, get_season, prepdata
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux
 from ARLR import ARLR_aug_phase, ARLR_red_phase, ARLR_fct, ARLR_err_met, fct_uncert, uncer_scr,multi_step_fct, ARLR_model, outputdistribution_bst, outputdistribution_Gaussker,accu_output
 import pkg_resources
 import warnings
@@ -81,7 +81,7 @@ def get_regions():
     return regions
 
 def get_targets():
-    targets = {"wili": "% WEIGHTED ILI", "ili": "%UNWEIGHTED ILI", "ilitotal": "ILITOTAL", "totalpatients": "TOTAL PATIENTS"} #onset and peak week still need to be added
+    targets = {"wili": "% WEIGHTED ILI", "ili": "%UNWEIGHTED ILI", "ilitotal": "ILITOTAL", "totalpatients": "TOTAL PATIENTS", "flux_wili": "weighted_ili", "flux_ili": "unweighted_ili", "flux_region_type": "region_type", "ili_region_type": "REGION TYPE", "flux_region": "region", "ili_region": "REGION"} #onset and peak week still need to be added
     return targets
 
 def get_bin():    
@@ -213,6 +213,7 @@ def parse_args():
     ap.add_argument('-l', '--log', default=None,
                     help='log file, by default logs are written to'
                     ' standard output')
+    ap.add_argument('-o','--out_folder', required=True, help='CSV format output file of county predictions')
 
     return ap.parse_args()
 
@@ -252,57 +253,53 @@ def main():
     
     csv_path = args.ground_truth
     
-    year = args.forecast_from
-    pdb.set_trace()
-    fdf = prepdata(csv_path)
-    fdf['REGION'] = fdf['REGION'].fillna('National')
-    fdf.dropna(subset=['%UNWEIGHTED ILI'],inplace=True)
-    fdf = fdf.drop(fdf[(fdf['REGION'] == 'Puerto Rico')|(fdf['REGION'] == 'Virgin Islands')|(fdf['REGION'] == 'New York City')].index)
+    epiyear = args.forecast_from
+    startyear = epiyear[:4] #args.forecast_from[:4]
+    startweek = epiyear[4:] #args.forecast_from[6:8]
+    #trainweek = startweek
+    ews = epi.Week(int(startyear), int(startweek))
+    header_region_type = targets['flux_region_type'] #"REGION TYPE" for retro or old datasets
+    header_region = targets['flux_region'] #"REGION" for retro or old datasets
+    
+    fdf = prepdata_flux(csv_path, ews)
+    fdf[header_region] = fdf[header_region].fillna('National')
+    fdf = fdf.drop(fdf[(fdf[header_region] == 'Puerto Rico')|(fdf[header_region] == 'Virgin Islands')|(fdf[header_region] == 'New York City')].index)
     
     if int(args.test):
         directory = 'dump/'
         if not os.path.exists(directory):
             os.makedirs(directory) 
         
-    
-    directory_bst = 'output/' + 'ARLR_bst/' + str(args.forecast_from)
-    directory_Gaussker = 'output/' + 'ARLR_Gaussker/' + str(args.forecast_from)
+    directory_bst = args.out_folder + 'ARLR_bst/' + str(args.forecast_from)
+    directory_Gaussker = args.out_folder + 'ARLR_Gaussker/' + str(args.forecast_from)
 
     if not os.path.exists(directory_bst):
         os.makedirs(directory_bst)
     if not os.path.exists(directory_Gaussker):
         os.makedirs(directory_Gaussker)
     bin_ed = get_bin()
-    EWs = []
-    for y in range(int(year),2020):
-        for week in epi.Year(y).iterweeks():
-            w = int(str(week))
-            if (w<int(year+'40'))|(w>201920):
-                continue
-    #         print(w)
-            EWs.append(str(w)) 
-    pdb.set_trace()
-    for wks in EWs:#epi.Year(int(args.forecast_from)).iterweeks():
-        startyear = wks[:4] #args.forecast_from[:4]
-        startweek = wks[4:] #args.forecast_from[6:8]
-        #trainweek = startweek
-        ews = epi.Week(int(startyear), int(startweek))
-        for region in fdf['REGION'].unique():
-            #for i in range(0, 1):
-            #if region=='National' or 'HHS Regions':
-            #    target = targets["wili"]
-            #else:
-            #    target = targets["ili"]
-            target = targets['wili']
-            df = fdf[fdf['REGION']==region]       
-            predictions, bn_mat_bst, bn_mat_Gaussker = ARLR_module(df, region, target, ews, fct_weeks)
-            if int(args.CDC):
-                outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
-                outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
 
-            if df['REGION TYPE'].unique() == 'States':
-                print(region)
-                accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
+     
+    
+    
+    for region in fdf[header_region].unique():
+        #for i in range(0, 1):
+        #if region=='National' or 'HHS Regions':
+        #    target = targets["wili"]
+        #else:
+        #    target = targets["ili"]
+        target = targets['flux_wili'] # "wili" for retro or old datasets
+        df = fdf[fdf[header_region]==region]       
+        predictions, bn_mat_bst, bn_mat_Gaussker = ARLR_module(df, region, target, ews, fct_weeks)
+        if int(args.CDC):
+            #outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
+            #outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+            outputdistribution_fromtemplate(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+
+
+        if df[header_region_type].unique() == 'States':
+            print(region)
+            accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
 if __name__ == "__main__":
     main()
 # Multi-step forecast
