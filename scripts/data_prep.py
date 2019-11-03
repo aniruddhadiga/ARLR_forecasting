@@ -14,6 +14,7 @@ import pdb
 from pandas import Series
 from datetime import date, time, datetime, timedelta
 from scipy import signal
+from aw_micro import cdc_data
 
 def data_read_and_prep(csv_path, epwk, yr, test_wks=4, wght=False, log_tr=False):
     # Read in the historical ILI data from startdate given by epwk and year from the csv_path and 
@@ -59,11 +60,12 @@ def prepdata_append():
     df = regional.append(pd.read_csv('data/state/ILINet.csv', header=1))
     return df
 
-def prepdata(csv_path):
-    
-    df = pd.read_csv(csv_path, na_values='X')
+def prepdata(csv_path):    
+    df = pd.read_csv(csv_path, na_values='X', header=1)
+    df['REGION'] = df['REGION'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
-
+    return df
+    
 def prepdata_retro(csv_path,epwk):
     nat_csv_file = csv_path + '/' +'national/'+'ILINet_National_' + epwk + '.csv'
     df = pd.read_csv(nat_csv_file, na_values='X')
@@ -82,7 +84,17 @@ def prepdata_flux(csv_path,epwk):
     df['region'] = df['region'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
 
+def prep_aw_data(aw_csv_path):
+    df_ex = pd.read_csv(aw_csv_path)
+    pp = pd.to_datetime([epi.Week(int(cdc_data.date2ew(d.date())[0]),int(cdc_data.date2ew(d.date())[1])).startdate() for d in pd.to_datetime(df_ex.date)])
+    df_ex['ep_st_date'] = pp
+    df_ex.index = pp
+    df_ex.index = df_ex.index.rename('DATE')
+    df_ex = df_ex[~df_ex.area_id.isin([72,78])]
+    df_st_id = pd.read_csv('../data/fips_to_statename.csv')
+    df_ex['REGION'] = df_ex.apply(lambda row: df_st_id[df_st_id['area_id']==row['area_id']]['REGION'].values[0], axis=1)
 
+    return(df_ex)
         #df.set_index(['DATE'], inplace=True)
 
     #if region == 'US National':
