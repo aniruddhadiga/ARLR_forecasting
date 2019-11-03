@@ -75,7 +75,6 @@ def ARLR_regressor(df, df_wtr, df_ght, region, mask_targ_dict, ews):
 def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
     '''df_m: DataFrame that contains data upto forecast date, hence, for "ili" no values are present but it is present for ght and weather, exogenous variables provide a prior to forecast as they contain forecast week information''' 
     all_exog_rgsr = get_exog_reg(targ_dict)
-    pdb.set_trace()
     y = ((df_m[targ_dict['target']]))
     y = y[-1::-1]
     y_obs = y[1:(win+1)].values-y[2:(win+2)].values # 1 shift as we will have current week data for ght and weather for which we provide forecast
@@ -98,13 +97,18 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
             if str(i).isdigit(): # check if it is a lag or exog column
                 tr_tp[:,k] = np.array(y[(i+1):(win+i+1)].values).reshape(win)
             else:
+                print(i)
                 exog_reg = df_m[i].values # reads the column name in the dataframe specified by name="i"
                 exog_reg = np.flip(exog_reg)
                 exog_reg = exog_reg[min(lags_chk):(min(lags_chk)+win)] # Most recent date -1 week's data used for exog. variable for training 
                 tr_tp[:,k] = exog_reg[0:win]
                 
             tr_tp_mul = np.matmul(tr_tp[:,0:(k+1)].T, tr_tp[:,0:(k+1)])
-            res = sm.OLS(y_obs,tr_tp[:,0:(k+1)]).fit()
+            try:
+                res = sm.OLS(y_obs,tr_tp[:,0:(k+1)]).fit()
+            except ValueError as value_err:
+                print(value_err)
+                
             yp = res.predict()
             err_m[jj] = np.linalg.norm(y_obs-yp)
             llr[jj] = 2*np.log(err_old/err_m[jj])
