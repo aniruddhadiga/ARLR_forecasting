@@ -141,7 +141,6 @@ def main():
     # weather data
     aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
     
-    aw_target = ['temperature_mean', 'AH_mean', 'cloud_cover_mean']#, 'wind_speed_mean']
     df_wtr = prep_aw_data(aw_csv_path)
     df_wtr = df_wtr[~df_wtr.area_id.isin([72,78])]
     df_st_id = pd.read_csv('../data/fips_to_statename.csv')
@@ -157,16 +156,16 @@ def main():
     df_ght = df_ght.rename(columns={'state':'REGION'})
     ght_target = ['flu', 'cough', 'fever', 'influenza', 'cold']
     
-    allw_lags_f = np.arange(1,53) # should have atleast "ms_fct" lags as we find "ms_fct" filters separately
+    allw_lags_f = np.arange(1,3) # should have atleast "ms_fct" lags as we find "ms_fct" filters separately
     if args.ght_data is None and args_accu_data is None:
         targ_dic = {"target" : [targets['ili'],targets['wili']]}
     if args.ght_data is None:
-        targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean', 'ep_st_date',]}#, 'wind_speed_mean']}
+        targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean']}#, 'wind_speed_mean']}
     elif args.accu_data is None:
         targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold']}
     else:
         targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min',
-    'temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean', 'ep_st_date',]}#, 'wind_speed_mean']}
+    'temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean']}#, 'wind_speed_mean']}
     
     if int(args.test):
         directory = 'dump/'
@@ -185,7 +184,7 @@ def main():
      
 
     targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min',
-'temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean', 'ep_st_date',]}#, 'wind_speed_mean']}
+'temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean']}#, 'wind_speed_mean']}
     targ_dict
     for region in fdf[header_region].unique():
         if fdf[header_region_type].unique() == 'States':
