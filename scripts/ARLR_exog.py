@@ -55,19 +55,30 @@ def ARLR_regressor(df, df_wtr, df_ght, region, mask_targ_dict, ews):
     '''If we have other regressors, need a for loop'''
     ews_1 = ews+1 # we need ght and weather data for forecst week, hence +1
     df_reg = df[df['REGION']==region]
-    df_wtr_reg = df_wtr[df_wtr['REGION']==region]
-    df_ght_reg = df_ght[df_ght['REGION']==region]
-    df_m = pd.merge(df_reg,df_wtr_reg,how='outer', left_index=True, right_index=True)
-    df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
+    df_m = df_reg
+    if df_wtr.empty and not df_ght.empty:
+        df_m = pd.merge(df_m,df_wtr,how='outer', left_index=True, right_index=True)
+        df_ght_reg = df_ght[df_ght['REGION']==region] 
+        df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
+    if df_ght.empty and not df_wtr.empty:
+        df_m = pd.merge(df_m,df_ght,how='outer', left_index=True, right_index=True)
+        df_wtr_reg = df_wtr[df_wtr['REGION']==region]
+        df_m = pd.merge(df_reg,df_wtr_reg,how='outer', left_index=True, right_index=True)
+    elif not df_ght.empty and not df_wtr.empty:
+        df_wtr_reg = df_wtr[df_wtr['REGION']==region]
+        df_ght_reg = df_ght[df_ght['REGION']==region]
+        df_m = pd.merge(df_m,df_wtr_reg,how='outer', left_index=True, right_index=True)
+        df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
+    
     mask_targ = []
     for k in list(mask_targ_dict):
         mask_targ = mask_targ+(mask_targ_dict[k])
     df_m = df_m[mask_targ]
     df_m = df_m[df_m.index<=pd.to_datetime((ews_1).startdate())].fillna(1e-2)
-    df_m[mask_targ_dict['target']] = (df_m[mask_targ_dict['target']])
-    df_m = df_m.replace(0.0, np.nan)
+    df_m[mask_targ_dict['target']] = np.log(df_m[mask_targ_dict['target']])
+    df_m = df_m.replace(-np.inf, np.nan)
     df_m = df_m.interpolate()
-    df_m[mask_targ_dict['ght_target']] = np.log(df_m[mask_targ_dict['ght_target']])
+    df_m[mask_targ_dict['ght_target']] = (df_m[mask_targ_dict['ght_target']])
     df_m[mask_targ_dict['aw_target']] = (df_m[mask_targ_dict['aw_target']])
     return df_m
     
@@ -77,13 +88,20 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
     all_exog_rgsr = get_exog_reg(targ_dict)
     y = ((df_m[targ_dict['target']]))
     y = y[-1::-1]
-    y_obs = y[1:(win+1)].values-y[2:(win+2)].values # 1 shift as we will have current week data for ght and weather for which we provide forecast
-    ind = y[1:(win+1)].index
+    ind = y.index
+    try:
+        y = np.array(y).reshape(len(y))
+    except:
+        pdb.set_trace()
+    y_obs = y[1:(win+1)]#-y[2:(win+2)] # 1 shift as we will have current week data for ght and weather for which we provide forecast
+    ind = ind[0:win]
+    y_obs = np.array(y_obs)
+    if np.linalg.norm(y_obs) == 0:
+        pdb.set_trace()
     lags_chk = list(np.array(lags).astype(int)) # lags pertaining to AR coeffs
     lags_chk_all = lags_chk+all_exog_rgsr 
     all_rgsr = lags_chk+all_exog_rgsr # Need to keep a copy of lags_chk_all as it is getting updated
     lags_app = []
-    
     err_old = np.linalg.norm(y_obs)#np.random.randn(win,1))
     tr_tp = np.zeros([win,len(lags_chk_all)])
     
@@ -95,9 +113,9 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
         jj = 0
         for i in lags_chk_all:            
             if str(i).isdigit(): # check if it is a lag or exog column
-                tr_tp[:,k] = np.array(y[(i+1):(win+i+1)].values).reshape(win)
+                tr_tp[:,k] = y[(i+1):(win+i+1)]
             else:
-                print(i)
+                #print(i)
                 exog_reg = df_m[i].values # reads the column name in the dataframe specified by name="i"
                 exog_reg = np.flip(exog_reg)
                 exog_reg = exog_reg[min(lags_chk):(min(lags_chk)+win)] # Most recent date -1 week's data used for exog. variable for training 
@@ -106,14 +124,14 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
             tr_tp_mul = np.matmul(tr_tp[:,0:(k+1)].T, tr_tp[:,0:(k+1)])
             try:
                 res = sm.OLS(y_obs,tr_tp[:,0:(k+1)]).fit()
-            except ValueError as value_err:
-                print(value_err)
-                
+            except:
+                pdb.set_trace()
+            #res = sm.OLS(y_obs,tr_tp[:,0:(k+1)]).fit()   
             yp = res.predict()
             err_m[jj] = np.linalg.norm(y_obs-yp)
             llr[jj] = 2*np.log(err_old/err_m[jj])
             jj+=1
-    
+             
         imax = np.argmax(llr)
     #     p_val = chi2.sf(llr[imax],1)
     #     print(p_val)
@@ -131,46 +149,57 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
             err_old = err_m[imax]
         else:
             break
-    res = sm.OLS(y_obs,tr_tp[:,0:(k)]).fit()
+    if k:
+        res = sm.OLS(y_obs,tr_tp[:,0:(k)]).fit()
+    else:
+        res = sm.OLS(y_obs,tr_tp[:,0]).fit()
+    
     yp = res.predict()
     pred_err = y_obs-yp
     return res, yp, y, tr_tp, llr, pred_err, lags_app, ind, all_rgsr,win
 
 
 def ARLR_red_phase_exog(y,tr_tp,err_old, lags, res1, lags_app,ind, win, llr_tol):
-    y_obs = y[1:(win+1)].values-y[2:(win+2)].values # 1 shift as we will have current week data for ght and weather for which we provide forecast
+    y_obs = y[1:(win+1)]#-y[2:(win+2)] # 1 shift as we will have current week data for ght and weather for which we provide forecast
     tot_col = len(lags_app)
-    temp_tr_tp = tr_tp[:,0:tot_col]
-    for i in range(0,tot_col+1):
-        init_lag_len_new = temp_tr_tp.shape[1]
-        jj = 0 
-        err_m = np.zeros([len(lags_app)])
-        llr = np.zeros([len(lags_app)])
-        for k in range(0,tot_col):
-#             pdb.set_trace()
-            if tot_col <=1:
-                break
-    
-            res = sm.OLS(y_obs,np.delete(temp_tr_tp,k,1)).fit()
-            yp = res.predict()
-            err_m[jj] = np.linalg.norm(y_obs-yp)
-            llr[jj] = 2*np.log(err_old/err_m[jj])
-            jj+=1
-        imin = np.argmin(llr)
-#         if (llr[imin]>llr_tol):
-#             temp_tr_tp = np.delete(temp_tr_tp,imin,1) 
-#             lags_app.remove(lags_app[imin])
-#             err_old = err_m[imin]
-# #             pdb.set_trace()
-#         else:
-# #             pdb.set_trace()
-#             break
+    if tot_col == 0:
+        yp_lag1 = y_obs
+        temp_tr_tp = tr_tp[:,0:tot_col]
+    else:
+        temp_tr_tp = tr_tp[:,0:tot_col]
+        for i in range(0,tot_col+1):
+            init_lag_len_new = temp_tr_tp.shape[1]
+            jj = 0 
+            err_m = np.zeros([len(lags_app)])
+            llr = np.zeros([len(lags_app)])
+            for k in range(0,tot_col):
+#                 pdb.set_trace()
+                if tot_col <=1:
+                    break
+        
+                res = sm.OLS(y_obs,np.delete(temp_tr_tp,k,1)).fit()
+                yp = res.predict()
+                err_m[jj] = np.linalg.norm(y_obs-yp)
+                llr[jj] = 2*np.log(err_old/err_m[jj])
+                jj+=1
+            try:
+                imin = np.argmin(llr)
+            except:
+                pdb.set_trace()
+#             if (llr[imin]>llr_tol):
+#                 temp_tr_tp = np.delete(temp_tr_tp,imin,1) 
+#                 lags_app.remove(lags_app[imin])
+#                 err_old = err_m[imin]
+# #                 pdb.set_trace()
+#             else:
+# #                 pdb.set_trace()
+#                 break
 
     res = sm.OLS(y_obs,temp_tr_tp).fit()
     yp = res.predict()
     pred_err = y_obs-yp
     print(lags_app)
-    yp_lag1 = yp+y[2:win+2] #add lag1 component back 
+    yp_lag1 = yp 
     return res, yp_lag1, temp_tr_tp, llr, pred_err, res1, lags_app, ind
 
 def ARLR_model_exog(df_m, allw_lags, targ_dict, win,llr_tol=1e-3):
@@ -194,9 +223,11 @@ def ARLR_fct_exog(coeffs,df_m,lags_app,fct_win, wks, allw_lags, targ_dict):
     yp_fct = np.zeros([fct_win])
     pred_err = np.zeros([fct_win])
     
-    y = np.flip(df_m[targ_dict['target']])
-    y_obs = (y-y.shift(-1))
+    y = (df_m[targ_dict['target']])
+    y = y[::-1] # flip the vector
+    y_obs = y
     y_obs = y_obs.interpolate()
+    y_obs = np.array(y_obs)
     fct_var = np.zeros(len(lags_app))
     pred_win = len(coeffs) # coeffs len
 #     y_obs = y[lags_app-1]
@@ -213,11 +244,10 @@ def ARLR_fct_exog(coeffs,df_m,lags_app,fct_win, wks, allw_lags, targ_dict):
 #         pdb.set_trace()
         yp_fct[i] = np.dot(fct_var,coeffs[lags_app])
         fct_var = np.append(yp_fct[i],fct_var[0:(len(fct_var)-1)])
-    pdb.set_trace()
-    yp_fct = yp_fct+y.shift(-1)[0:fct_win]
+    
     return yp_fct, pred_err
 
-def multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags, ms_fct, win, Nb, bin_ed, uncer_anl=False):
+def multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_dict, ms_fct, win, Nb, bin_ed, uncer_anl=False):
     '''Using the data_frame, returns 1, 2,... ms_fct-week ahead forecast and also provides the uncertainty in estimation using bootstrap method if uncer_anl=True'''
     yp_fct=np.zeros(ms_fct)
     yb_fct=np.zeros([ms_fct,Nb])
@@ -235,8 +265,8 @@ def multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags, ms_fc
             yb_fct[wks-1,:] = fct_uncert(df_m, train_pred_err[wks-1,:],coeffs[wks-1,:],lags_app[wks-1,:], win, Nb)
             log_scr[wks-1], bn_mat_bst[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed,1e-5)
             bn_mat_Gaussker[:, wks-1] = uncer_Gaussker(yp_fct[wks-1], ms_fct,train_pred_err[wks-1,:], bin_ed, 1e-5)
-        print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks, (yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
-    return yp_fct, yb_fct, log_scr, bn_mat_bst.reshape([131,4]), bn_mat_Gaussker.reshape([131,4]), train_pred_err
+        print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks,np.exp(yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
+    return np.exp(yp_fct), yb_fct, log_scr, bn_mat_bst.reshape([131,4]), bn_mat_Gaussker.reshape([131,4]), train_pred_err
 
 def rgsrs_ARLR(coeffs, lags, targ_dict, ews):    
     all_exog_rgsr = get_exog_reg(targ_dict)
@@ -356,10 +386,10 @@ def ARLR_exog_module(df, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw
     for new_wks in np.arange(0,fut_wks):
 #         data_frame = data_frame.append(test[new_wks:(new_wks+1)])
 #         data_test = data_test[1:]
-        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker, train_pred_err = multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags, ms_fct, win, Nb, bin_ed, uncer_anl)
+        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker, train_pred_err = multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_dict, ms_fct, win, Nb, bin_ed, uncer_anl)
     
-    seas, err_p = ARLR_fct(coeffs[0,:],train,lags_app[0,:],20, 0)
-    
+    #seas, err_p = ARLR_fct_exog(coeffs[0,:],train,lags_app[0,:],20, 0)
+    seas = 0
     return (yp_fct), bn_mat_bst, bn_mat_Gaussker, seas, lags_app,coeffs
 
 
