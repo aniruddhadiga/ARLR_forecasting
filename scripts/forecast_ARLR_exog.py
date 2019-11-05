@@ -144,7 +144,7 @@ def main():
     if args.ght_data is None and args.accu_data is None:
         df_ght = pd.DataFrame()
         df_wtr = pd.DataFrame()
-        targ_dict = {"target" : [targets['ili'],targets['wili']]}
+        targ_dict = {"target" : [targets['ili'],targets['wili']],"ght_target" : [], "aw_target" : []}
     elif args.ght_data is None and args.accu_data is not None:
         df_ght = pd.DataFrame()
         targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
@@ -208,8 +208,6 @@ def main():
                 if targets['ili'] in v:
                     v.remove(targets['ili'])
             
-        if region == 'District of Columbia':
-            pdb.set_trace()
 
         df_m  = ARLR_regressor(fdf, df_wtr, df_ght, region, targ_dict, ews)
         predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(fdf, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw_lags_f) 
