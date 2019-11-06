@@ -121,6 +121,7 @@ def main():
     
     
     csv_path = args.ground_truth
+    st_id_path = args.st_fips
     
     epiyear = args.forecast_from
     startyear = epiyear[:4] #args.forecast_from[:4]
@@ -150,11 +151,8 @@ def main():
         targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
         aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
      
-        df_wtr = prep_aw_data(aw_csv_path)
-        df_wtr = df_wtr[~df_wtr.area_id.isin([72,78])]
-        df_st_id = pd.read_csv('../data/fips_to_statename.csv')
-        df_wtr['REGION'] = df_wtr.apply(lambda row: df_st_id[df_st_id['area_id']==row['area_id']]['REGION'].values[0], axis=1)
-
+        df_wtr = prep_aw_data(aw_csv_path, st_id_path)
+        
     elif args.accu_data is None and args.ght_data is not None:
         df_wtr = pd.DataFrame()
         targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold']}
@@ -168,11 +166,8 @@ def main():
     else:
         targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
         # weather data
-        aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
-        df_wtr = prep_aw_data(aw_csv_path)
-        df_wtr = df_wtr[~df_wtr.area_id.isin([72,78])]
-        df_st_id = pd.read_csv('../data/fips_to_statename.csv')
-        df_wtr['REGION'] = df_wtr.apply(lambda row: df_st_id[df_st_id['area_id']==row['area_id']]['REGION'].values[0], axis=1)
+        aw_csv_path = args.accu_data
+        df_wtr = prep_aw_data(aw_csv_path, st_id_path)
         
         # GHT data
         ght_csv_path = args.ght_data

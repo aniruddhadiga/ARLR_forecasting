@@ -84,15 +84,15 @@ def prepdata_flux(csv_path,epwk):
     df['region'] = df['region'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
 
-def prep_aw_data(aw_csv_path):
+def prep_aw_data(aw_csv_path, st_id_path):
     df_ex = pd.read_csv(aw_csv_path)
     pp = pd.to_datetime([epi.Week(int(cdc_data.date2ew(d.date())[0]),int(cdc_data.date2ew(d.date())[1])).startdate() for d in pd.to_datetime(df_ex.date)])
     df_ex['ep_st_date'] = pp
     df_ex.index = pp
     df_ex.index = df_ex.index.rename('DATE')
     df_ex = df_ex[~df_ex.area_id.isin([72,78])]
-    df_st_id = pd.read_csv('../data/fips_to_statename.csv')
-    df_ex['REGION'] = df_ex.apply(lambda row: df_st_id[df_st_id['area_id']==row['area_id']]['REGION'].values[0], axis=1)
+    df_st_id = pd.read_csv(st_id_path)
+    df_ex['REGION'] = df_ex.apply(lambda row: df_st_id[df_st_id['state']==row['area_id']]['state_name'].values[0], axis=1)
 
     return(df_ex)
         #df.set_index(['DATE'], inplace=True)

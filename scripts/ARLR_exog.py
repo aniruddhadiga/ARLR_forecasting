@@ -266,7 +266,7 @@ def multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_d
             log_scr[wks-1], bn_mat_bst[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed,1e-5)
             bn_mat_Gaussker[:, wks-1] = uncer_Gaussker(yp_fct[wks-1], ms_fct,train_pred_err[wks-1,:], bin_ed, 1e-5)
         print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks,np.exp(yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
-    return np.exp(yp_fct), yb_fct, log_scr, bn_mat_bst.reshape([131,4]), bn_mat_Gaussker.reshape([131,4]), train_pred_err
+    return np.exp(yp_fct), yb_fct, log_scr, bn_mat_bst.reshape([131,ms_fct]), bn_mat_Gaussker.reshape([131,ms_fct]), train_pred_err
 
 def rgsrs_ARLR(coeffs, lags, targ_dict, ews):    
     all_exog_rgsr = get_exog_reg(targ_dict)
