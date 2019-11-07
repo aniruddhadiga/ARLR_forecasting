@@ -90,6 +90,10 @@ def parse_args():
 
 
 def main():
+    config = configparser.ConfigParser()
+    config_file = pkg_resources.resource_filename(__name__, 'config.ini')
+    config.read(config_file)
+    
     args = parse_args()
     
     level = logging.INFO
@@ -133,13 +137,18 @@ def main():
     header_region = targets['ili_region'] #"REGION" for retro or old datasets
     
 
-
+    end_date = args.end_date
     fdf = prepdata(csv_path)
-    fdf = fdf[~fdf.REGION.isin(['Florida','Puerto Rico','Virgin Islands','New York City'])]
+    if end_date is None:
+        end_date = fdf['DATE'].max().date() + timedelta(days=3)
+    else:
+        dt = datetime.strptime(end_date,'%Y%m%d').date()
+        end_date = dt + timedelta(days = (3 - dt.isoweekday()%7))
+    if args.end_date is not None:
+        fdf = fdf[fdf['DATE'] <= pd.Timestamp(end_date)] 
+    fdf = fdf[~fdf.REGION.isin(['Puerto Rico','Virgin Islands','New York City'])]
     fdf.index = fdf['DATE']
     fdf.index = fdf.index.rename('DATE')
-
-    
    
     # DataFrame preparation part, integrating accuweather, ght time series with ILI 
     if args.ght_data is None and args.accu_data is None:
@@ -202,7 +211,14 @@ def main():
             for v in targ_dict.values():
                 if targets['ili'] in v:
                     v.remove(targets['ili'])
-            
+        
+        win = int(config['Forecasting']['win']) # training window
+        max_lag = np.max(allw_lags_f) # maximum lag considered in the model
+        # Check if datastream has no missing information for all lagged regressors of length equal to training length window  
+        nan_chk_mask = (fdf[header_region]==region)&(fdf.index<=pd.to_datetime(ews.startdate()))&(fdf.index>=pd.to_datetime((ews-int(win+max_lag)).startdate())) 
+        if fdf[nan_chk_mask][targ_dict['target']].isna().values.any():
+            print('Missing values in ILI data, cannot produce forecasts')
+            continue    
 
         df_m  = ARLR_regressor(fdf, df_wtr, df_ght, region, targ_dict, ews)
         predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(fdf, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw_lags_f) 
