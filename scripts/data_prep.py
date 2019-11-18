@@ -71,7 +71,7 @@ def prepdata(csv_path):
     return df
     
 def prepdata_retro(csv_path,epwk):
-    nat_csv_file = csv_path + '/' +'national/'+'ILINet_National_' + epwk + '.csv'
+    nat_csv_file = csv_path + '/' +'national/'+'ILINet_national_' + epwk + '.csv'
     df = pd.read_csv(nat_csv_file, na_values='X')
     
     hhs_csv_file = csv_path +'/'+'hhs/'+'ILINet_HHS_' + epwk + '.csv'
@@ -80,14 +80,15 @@ def prepdata_retro(csv_path,epwk):
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
 
 def prepdata_flux(csv_path,epwk):
+    pdb.set_trace()
     nat_csv_file = csv_path + '/'+'ILINet_national_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
     df = pd.read_csv(nat_csv_file, na_values='X')
-    
+    df['region'] = df['region'].fillna('National')
     hhs_csv_file = csv_path +'/'+ 'ILINet_hhs_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
     df = df.append(pd.read_csv(hhs_csv_file,na_values='X'))
-    df['region'] = df['region'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
-
+    
+    return df
 
 def prep_aw_data(st_id_path, **kwargs):
     '''Prepares weather and return the corresponding dataframe. kwargs is a dictionary woth key as "national", "HHS", and/or "States" and values are the paths. Prepare this dictionary before calling this functions.'''

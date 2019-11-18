@@ -143,7 +143,8 @@ def main():
     
 
     end_date = args.end_date
-    fdf = prepdata_append(csv_path)
+    fdf = prepdata_flux(csv_path, ews)
+    pdb.set_trace()
     fdf = fdf.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
     if end_date is None:
         end_date = fdf['date'].max().date() + timedelta(days=3)
@@ -175,11 +176,11 @@ def main():
         targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
         #aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
      
-        df_wtr = prep_aw_data(st_id_path, kwargs_wtr)
+        df_wtr = prep_aw_data(st_id_path, **kwargs_wtr)
         
     elif accu_data_fl is None and ght_data_fl is not None:
         df_wtr = pd.DataFrame()
-        targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold']}
+        targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : []}
         #ght_csv_path = args.ght_data
         df_ght = prep_ght_data(**kwargs_ght)
         #df_ght.index = df_ght.date
@@ -253,7 +254,7 @@ def main():
         if fdf[header_region_type][fdf[header_region]==region].unique() == 'States':
             target = targets['flux_ili'] 
             accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
-
+            outputdistribution_state_fromtemplate(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews, sub_date)
 if __name__ == "__main__":
     main()
    
