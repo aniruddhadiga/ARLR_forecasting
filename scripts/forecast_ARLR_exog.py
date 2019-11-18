@@ -32,11 +32,10 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 
-from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data
-
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append
 from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin
 
-from output_format import outputdistribution_bst, outputdistribution_Gaussker,accu_output
+from output_format import outputdistribution_bst, outputdistribution_Gaussker,accu_output, outputdistribution_fromtemplate, outputdistribution_fromtemplate_for_FSN, outputdistribution_fromtemplate_for_FluSight, outputdistribution_state_fromtemplate
 
 import pkg_resources
 import warnings
@@ -81,9 +80,16 @@ def parse_args():
                     help='log file, by default logs are written to'
                     ' standard output')
     ap.add_argument('-o','--out_folder', required=True, help='CSV format output file of county predictions')
-    ap.add_argument('--accu_data', required=False, help='accuweather data stream')
-    ap.add_argument('--ght_data', required=False, help='google health trends data stream')
+    
+    ap.add_argument('--accu_data_nat', required=False, help='accuweather data stream')
+    ap.add_argument('--accu_data_hhs', required=False, help='accuweather data stream')
+    ap.add_argument('--accu_data_state', required=False, help='accuweather data stream')
 
+    ap.add_argument('--ght_data_nat', required=False, help='google health trends data stream')
+    ap.add_argument('--ght_data_hhs', required=False, help='google health trends data stream')
+    ap.add_argument('--ght_data_state', required=False, help='google health trends data stream')
+    ap.add_argument('--sub_date', required=False, help='Submission date for FluSight output file, if not mentioned automatically computed to Monday date')
+ 
 
     return ap.parse_args()
 
@@ -123,7 +129,6 @@ def main():
     # 
         
     
-    
     csv_path = args.ground_truth
     st_id_path = args.st_fips
     
@@ -133,58 +138,68 @@ def main():
     #trainweek = startweek
     ews = epi.Week(int(startyear), int(startweek))
     targets = get_targets()
-    header_region_type = targets['ili_region_type'] #"REGION TYPE" for retro or old datasets
-    header_region = targets['ili_region'] #"REGION" for retro or old datasets
+    header_region_type = targets['flux_region_type'] #"REGION TYPE" for retro or old datasets
+    header_region = targets['flux_region'] #"REGION" for retro or old datasets
     
 
     end_date = args.end_date
-    fdf = prepdata(csv_path)
+    fdf = prepdata_append(csv_path)
+    fdf = fdf.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
     if end_date is None:
-        end_date = fdf['DATE'].max().date() + timedelta(days=3)
+        end_date = fdf['date'].max().date() + timedelta(days=3)
     else:
         dt = datetime.strptime(end_date,'%Y%m%d').date()
         end_date = dt + timedelta(days = (3 - dt.isoweekday()%7))
     if args.end_date is not None:
-        fdf = fdf[fdf['DATE'] <= pd.Timestamp(end_date)] 
-    fdf = fdf[~fdf.REGION.isin(['Puerto Rico','Virgin Islands','New York City'])]
-    fdf.index = fdf['DATE']
-    fdf.index = fdf.index.rename('DATE')
+        fdf = fdf[fdf['date'] <= pd.Timestamp(end_date)] 
+    fdf = fdf[~fdf.region.isin(['Puerto Rico','Virgin Islands','New York City'])]
+    fdf.index = fdf['date']
+    fdf.index = fdf.index.rename('date')
    
-    # DataFrame preparation part, integrating accuweather, ght time series with ILI 
-    if args.ght_data is None and args.accu_data is None:
+    # DataFrame preparation part, integrating accuweather, ght time series with ILI
+    kwargs_wtr = {"National": args.accu_data_nat, "HHS": args.accu_data_hhs, "States": args.accu_data_state}
+    accu_data_fl = None
+    for _,value in kwargs_wtr.items():
+        accu_data_fl = accu_data_fl or value 
+    kwargs_ght = {"National": args.ght_data_nat, "HHS": args.ght_data_hhs, "States": args.ght_data_state}
+    ght_data_fl = None
+    for _,value in kwargs_ght.items():
+        ght_data_fl = ght_data_fl or value
+    
+    if ght_data_fl is None and accu_data_fl is None:
         df_ght = pd.DataFrame()
         df_wtr = pd.DataFrame()
-        targ_dict = {"target" : [targets['ili'],targets['wili']],"ght_target" : [], "aw_target" : []}
-    elif args.ght_data is None and args.accu_data is not None:
+        targ_dict = {"target" : [targets['flux_ili'],targets['flux_wili']],"ght_target" : [], "aw_target" : []}
+    elif ght_data_fl is None and accu_data_fl is not None:
         df_ght = pd.DataFrame()
         targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
-        aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
+        #aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
      
-        df_wtr = prep_aw_data(aw_csv_path, st_id_path)
+        df_wtr = prep_aw_data(st_id_path, kwargs_wtr)
         
-    elif args.accu_data is None and args.ght_data is not None:
+    elif accu_data_fl is None and ght_data_fl is not None:
         df_wtr = pd.DataFrame()
         targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold']}
-        ght_csv_path = args.ght_data
-        df_ght = pd.read_csv(ght_csv_path)
-        df_ght.index = df_ght.date
-        df_ght.index = df_ght.index.rename('DATE')
-        df_ght = df_ght.rename(columns={'state':'REGION'})
+        #ght_csv_path = args.ght_data
+        df_ght = prep_ght_data(**kwargs_ght)
+        #df_ght.index = df_ght.date
+        #df_ght.index = df_ght.index.rename('DATE')
+        #df_ght = df_ght.rename(columns={'state':'REGION'})
         ght_target = ['flu', 'cough', 'fever', 'influenza', 'cold']
 
     else:
-        targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
+        targ_dict = {"target" : [targets['flux_ili'],targets['flux_wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
         # weather data
-        aw_csv_path = args.accu_data
-        df_wtr = prep_aw_data(aw_csv_path, st_id_path)
+        #aw_csv_path = args.accu_data
+        df_wtr = prep_aw_data(st_id_path, **kwargs_wtr)
         
         # GHT data
-        ght_csv_path = args.ght_data
+        #ght_csv_path = args.ght_data
         
-        df_ght = pd.read_csv(ght_csv_path)
-        df_ght.index = df_ght.date
-        df_ght.index = df_ght.index.rename('DATE')
-        df_ght = df_ght.rename(columns={'state':'REGION'})
+        df_ght = prep_ght_data(**kwargs_ght)
+        #df_ght.index = df_ght.date
+        #df_ght.index = df_ght.index.rename('DATE')
+        #df_ght = df_ght.rename(columns={'state':'REGION'})
         ght_target = ['flu', 'cough', 'fever', 'influenza', 'cold']
     
            
@@ -197,21 +212,25 @@ def main():
         os.makedirs(directory_Gaussker)
     bin_ed = get_bin()
 
-    allw_lags_f = np.arange(1,108) # should have atleast "ms_fct" lags as we find "ms_fct" filters separately
+    allw_lags_f = np.arange(1,55) # should have atleast "ms_fct" lags as we find "ms_fct" filters separately
 
     #targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
-
+    if args.sub_date is not None:
+        sub_date = args.sub_date
+    else:
+        sub_date = ((ews+1).enddate()+timedelta(days=2)).isoformat() #submission for epiweek N is (epiweek N+1).enddate() + timedelta(days=2)
+    
     for region in fdf[header_region].unique():
-        if fdf[header_region_type].unique() == 'States':
+        targ_dict['target'] = [targets['flux_ili'], targets['flux_wili']]
+        if fdf[header_region_type][fdf[header_region]==region].unique() == 'States':
             print(region)
             for v in targ_dict.values():
-                if targets['wili'] in v:
-                    v.remove(targets['wili'])
+                if targets['flux_wili'] in v:
+                    v.remove(targets['flux_wili'])
         else:
             for v in targ_dict.values():
-                if targets['ili'] in v:
-                    v.remove(targets['ili'])
-        
+                if targets['flux_ili'] in v:
+                    v.remove(targets['flux_ili'])
         win = int(config['Forecasting']['win']) # training window
         max_lag = np.max(allw_lags_f) # maximum lag considered in the model
         # Check if datastream has no missing information for all lagged regressors of length equal to training length window  
@@ -219,19 +238,20 @@ def main():
         if fdf[nan_chk_mask][targ_dict['target']].isna().values.any():
             print('Missing values in ILI data, cannot produce forecasts')
             continue    
-
         df_m  = ARLR_regressor(fdf, df_wtr, df_ght, region, targ_dict, ews)
-        predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(fdf, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw_lags_f) 
-
+        predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f) 
     
-        if int(args.CDC):
+        if int(args.CDC) and fdf[header_region_type][fdf[header_region]==region].unique() != 'States':
+            target = targets['flux_wili'] 
                 #outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
                 #outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
-                outputdistribution_fromtemplate(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
-    
-    
-        if fdf[header_region_type].unique() == 'States':
-            
+            outputdistribution_fromtemplate_for_FSN(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews)
+            outputdistribution_fromtemplate_for_FluSight(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews, sub_date)
+
+ 
+   
+        if fdf[header_region_type][fdf[header_region]==region].unique() == 'States':
+            target = targets['flux_ili'] 
             accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
 
 if __name__ == "__main__":

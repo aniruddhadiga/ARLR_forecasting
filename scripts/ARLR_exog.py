@@ -54,19 +54,19 @@ def indices_to_rgsrs(lags_ind, allw_lags, all_exog_rgsr):
 def ARLR_regressor(df, df_wtr, df_ght, region, mask_targ_dict, ews):
     '''If we have other regressors, need a for loop'''
     ews_1 = ews+1 # we need ght and weather data for forecst week, hence +1
-    df_reg = df[df['REGION']==region]
+    df_reg = df[df['region']==region]
     df_m = df_reg
     if df_wtr.empty and not df_ght.empty:
         df_m = pd.merge(df_m,df_wtr,how='outer', left_index=True, right_index=True)
-        df_ght_reg = df_ght[df_ght['REGION']==region] 
+        df_ght_reg = df_ght[df_ght['region']==region] 
         df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
     if df_ght.empty and not df_wtr.empty:
         df_m = pd.merge(df_m,df_ght,how='outer', left_index=True, right_index=True)
-        df_wtr_reg = df_wtr[df_wtr['REGION']==region]
+        df_wtr_reg = df_wtr[df_wtr['region']==region]
         df_m = pd.merge(df_reg,df_wtr_reg,how='outer', left_index=True, right_index=True)
     elif not df_ght.empty and not df_wtr.empty:
-        df_wtr_reg = df_wtr[df_wtr['REGION']==region]
-        df_ght_reg = df_ght[df_ght['REGION']==region]
+        df_wtr_reg = df_wtr[df_wtr['region']==region]
+        df_ght_reg = df_ght[df_ght['region']==region]
         df_m = pd.merge(df_m,df_wtr_reg,how='outer', left_index=True, right_index=True)
         df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
     
@@ -116,7 +116,7 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
                 tr_tp[:,k] = y[(i+1):(win+i+1)]
             else:
                 #print(i)
-                exog_reg = df_m[i].values # reads the column name in the dataframe specified by name="i"
+                exog_reg = (df_m[i]-df_m[i].shift()).values # reads the column name in the dataframe specified by name="i"
                 exog_reg = np.flip(exog_reg)
                 exog_reg = exog_reg[min(lags_chk):(min(lags_chk)+win)] # Most recent date -1 week's data used for exog. variable for training 
                 tr_tp[:,k] = exog_reg[0:win]
@@ -262,8 +262,8 @@ def multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_d
 #         pdb.set_trace()
         if uncer_anl:
 #             pdb.set_trace()
-            yb_fct[wks-1,:] = fct_uncert(df_m, train_pred_err[wks-1,:],coeffs[wks-1,:],lags_app[wks-1,:], win, Nb)
-            log_scr[wks-1], bn_mat_bst[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed,1e-5)
+#            yb_fct[wks-1,:] = fct_uncert(df_m, train_pred_err[wks-1,:],coeffs[wks-1,:],lags_app[wks-1,:], win, Nb)
+#            log_scr[wks-1], bn_mat_bst[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed,1e-5)
             bn_mat_Gaussker[:, wks-1] = uncer_Gaussker(yp_fct[wks-1], ms_fct,train_pred_err[wks-1,:], bin_ed, 1e-5)
         print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks,np.exp(yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
     return np.exp(yp_fct), yb_fct, log_scr, bn_mat_bst.reshape([131,ms_fct]), bn_mat_Gaussker.reshape([131,ms_fct]), train_pred_err
@@ -296,7 +296,7 @@ def rgsrs_ARLR(coeffs, lags, targ_dict, ews):
         df['DATE'] = pd.to_datetime(ews.startdate())
     return df
 
-def ARLR_exog_module(df, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw_lags_f):
+def ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f):
     config = configparser.ConfigParser()
     config_file = pkg_resources.resource_filename(__name__, 'config.ini')
     config.read(config_file) 
@@ -317,7 +317,17 @@ def ARLR_exog_module(df, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw
     #test = pd.Series(test)
     #test.index = df_test['DATE']
     # Multi-step forecast
-    df_m  = ARLR_regressor(df, df_wtr, df_ght, region,targ_dict, ews)
+    
+    
+#     df_m  = ARLR_regressor(df, df_wtr, df_ght, region,targ_dict, ews)
+#     if ar_diff:
+#         a,b = get_stat_comp(df_m[targ_dict['target']], targ_dict, 208)
+#         df_m.loc[:,'%UNWEIGHTED ILI'] = a.loc[:,]
+#     # # adf['lag_comp'] = 0
+#         df_m.loc[:,'lag_comp'] = b.loc[:,]
+#     else:
+#         df_m.loc[:,'%UNWEIGHTED ILI'] = a.loc[:,] = df
+#         df_m.loc[:,'lag_comp'] = 0
     
     win = int(config['Forecasting']['win']) # Length of the historial training data to be considered
     
@@ -329,7 +339,7 @@ def ARLR_exog_module(df, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw
     llr_tol=1e-4 # log-likelihood tolerance
     
     # Uncertainty analysis
-    uncer_anl = 0#int(config['CDC']['uncer_anl'])
+    uncer_anl = 1#int(config['CDC']['uncer_anl'])
     Nb = int(config['CDC']['Nb'])
     # create bins
     n_bins=int(config['CDC']['n_bins'])
@@ -381,15 +391,177 @@ def ARLR_exog_module(df, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw
 #     # Once trained, use the coeffs to forecast multi-steps given data frame
     
     # For obtaining uncertainty in forecast estimates (using Boot strapping), choose uncer_anl = True,  
-    
 #     data_test = []#test
     for new_wks in np.arange(0,fut_wks):
 #         data_frame = data_frame.append(test[new_wks:(new_wks+1)])
 #         data_test = data_test[1:]
-        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker, train_pred_err = multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_dict, ms_fct, win, Nb, bin_ed, uncer_anl)
+        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker[new_wks, :,:], train_pred_err = multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_dict, ms_fct, win, Nb, bin_ed, uncer_anl)
     
-    #seas, err_p = ARLR_fct_exog(coeffs[0,:],train,lags_app[0,:],20, 0)
-    seas = 0
+    seas, err_p = ARLR_fct_exog(coeffs[0,:],df_m,lags_app[0,:],30,0, allw_lags, targ_dict)
+#     seas = 0
     return (yp_fct), bn_mat_bst, bn_mat_Gaussker, seas, lags_app,coeffs
+
+
+
+#def ARLR_exog_module(df, df_wtr, df_ght, region, targ_dict, ews, fct_weeks, allw_lags_f):
+#    config = configparser.ConfigParser()
+#    config_file = pkg_resources.resource_filename(__name__, 'config.ini')
+#    config.read(config_file) 
+#    
+#    ews_train = ews
+#    ews_test = ews   
+#    #df_train = df[(df['DATE']<=pd.to_datetime(ews_train.startdate()))]
+#    #df_train[target] = np.array(df_train[target],float)
+#    #df_train[target] = df_train[target].replace(0,1e-2) # check if zeros are there in ILI data as we take log
+#    #df_test = df[(df['DATE']>=pd.to_datetime(ews_train.startdate()))]
+#    #df_test[target] = np.array(df_test[target],float)
+#    #df_test[target] = df_test[target].replace(0,1e-2)
+#    #
+#    #train = np.log(np.array(df_train[target],'float').astype(float))
+#    #test = np.log(np.array(df_test[target],'float').astype(float))
+#    #train = pd.Series(train)
+#    #train.index = df_train['DATE']
+#    #test = pd.Series(test)
+#    #test.index = df_test['DATE']
+#    # Multi-step forecast
+#    df_m  = ARLR_regressor(df, df_wtr, df_ght, region,targ_dict, ews)
+#    
+#    win = int(config['Forecasting']['win']) # Length of the historial training data to be considered
+#    
+#    fut_wks = int(config['Forecasting']['fut_wks']) # Number of weeks ahead to forecast from training data 
+#    ms_fct = fct_weeks # For every forecast week, give additional ms_fct weeks forecast
+#    
+#    test_win = fut_wks+ms_fct # Number of true value to be fetched (testing accuracy)
+#    exp_max_lags =  int(config['Forecasting']['exp_max_lags'])# expected maximum lags to be considered in the model
+#    llr_tol=1e-4 # log-likelihood tolerance
+#    
+#    # Uncertainty analysis
+#    uncer_anl = 0#int(config['CDC']['uncer_anl'])
+#    Nb = int(config['CDC']['Nb'])
+#    # create bins
+#    n_bins=int(config['CDC']['n_bins'])
+#    
+#
+#    bin_ed = get_bin()
+#    
+#    # Check data for stationarity in the training data with padding
+#    #train_win = train[-1:(-win-exp_max_lags-1):-1] # training samples in the window period + buffer
+#    
+#    
+#    #result = adfuller(train_win)
+#    #print(result)
+#    #if result[1] < 0.05:
+#    #    print('p-val of ADF test %e' %result[1])
+#    #    print('Stationary signal')
+#    # plt.plot(train_win)
+#    # Check seasonality
+#    #season_ind = get_season(train_win,fft_len=1024,figs=False)
+#    # train the model
+#    
+#    max_lags = np.max(allw_lags_f)
+#    max_lags_with_rgsr = max_lags+len(get_exog_reg(targ_dict)) # No. of AR lags + number of exog. vr 
+#    coeffs=np.zeros([ms_fct,max_lags_with_rgsr+1])
+#    train_pred_err=np.zeros([ms_fct, win])
+#    yp_train=np.zeros([ms_fct, win]) 
+#    lags_app=np.zeros([ms_fct,max_lags_with_rgsr+1])
+#    # Train to obtain ARLR coeffs for all specified multi-step forecast:
+#    # Ex: For 1-step forecast, consider data from t-1 to t-p for training: ms_fct = 1
+#    # for 4-step forecast, consider data for t-4 to t-p for training: ms_fct = 4 
+#    # similarly for 1 season, ms_fct = 52
+#    for wks in range(1,ms_fct+1):
+#        allw_lags = allw_lags_f[(wks-1):]#np.arange(wks,max_lags+1)#np.append(np.arange(wks,5),52)#
+#        coeffs_temp, yp_train_temp, tr_tp1, train_pred_err_temp, lags_temp = ARLR_model_exog(df_m, allw_lags, targ_dict, win, 1e-3) #ARLR_model(train,allw_lags,win,llr_tol)
+#        yp_train[wks-1,:] = yp_train_temp
+#        train_pred_err[wks-1,:] = train_pred_err_temp
+#        all_exog_rgsr = get_exog_reg(targ_dict) 
+#        rgsrs_indices = rgsrs_to_indices(lags_temp, allw_lags, all_exog_rgsr)
+#        lags_app[wks-1,rgsrs_indices] = rgsrs_indices
+#        coeffs[wks-1,:] = coeffs_temp
+#    
+#    
+#    yp_fct=np.zeros([fut_wks,ms_fct])
+#    yp_fct_ch=np.zeros([fut_wks,ms_fct])
+#    yb_fct=np.zeros([fut_wks,ms_fct,Nb])
+#    log_scr = np.zeros([fut_wks, ms_fct])
+#    bn_mat_bst = np.zeros([fut_wks, len(bin_ed)-1, ms_fct])
+#    bn_mat_Gaussker = np.zeros([fut_wks, len(bin_ed)-1, ms_fct])
+##     # Once trained, use the coeffs to forecast multi-steps given data frame
+#    
+#    # For obtaining uncertainty in forecast estimates (using Boot strapping), choose uncer_anl = True,  
+#    
+##     data_test = []#test
+#    for new_wks in np.arange(0,fut_wks):
+##         data_frame = data_frame.append(test[new_wks:(new_wks+1)])
+##         data_test = data_test[1:]
+#        yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker, train_pred_err = multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_dict, ms_fct, win, Nb, bin_ed, uncer_anl)
+#    
+#    #seas, err_p = ARLR_fct_exog(coeffs[0,:],train,lags_app[0,:],20, 0)
+#    seas = 0
+#    return (yp_fct), bn_mat_bst, bn_mat_Gaussker, seas, lags_app,coeffs
+
+def fct_uncert(train, pred_err,coeffs, lags_app, win, Nb=1000):
+    '''Provides Nb forecasts based on the bootstrap samples generated by create_bootstrap fucntion'''
+#     pdb.set_trace()
+    lags_app = lags_app[lags_app!=0].astype(int)
+    yb_mat = np.zeros([Nb,win])
+    yb_fct = np.zeros(Nb)
+    i=0 # discard outlier sample values
+    t_o = 0 # time out variable
+    while i < Nb:
+#         pdb.set_trace()
+        yb_mat[i,:],ind = create_bootstrap(train, pred_err, coeffs, lags_app, win)
+#         pdb.set_trace()
+        yb_fct[i], pred = ARLR_fct(coeffs,yb_mat[i,:],lags_app,1,1)
+        if np.abs(yb_fct[i]) > 100 and t_o<10000:
+            t_o+=1
+            i+=1
+            #pdb.set_trace()
+            continue
+        else:
+            i+=1
+#     pdb.set_trace()
+    return yb_fct
+
+def uncer_scr(yb_fct, yp_fct, ms_fct, N_b, bin_ed,alp=1e-5):
+    '''Puts the bootstrap samples provided by fct_uncert function into bins with bin edges given by bin_ed'''
+#     be = np.arange(0,n_bins,.1)
+#     be = np.append(be,20)
+    bn_mat = np.zeros([len(bin_ed)-1, ms_fct])
+    log_scr = 0#np.zeros(ms_fct)
+#     pdb.set_trace()
+#         plt.subplot(ms_fct,1,i+1)
+    bn = np.histogram(np.exp(yb_fct[:]),bins=bin_ed)# plt.plot(y_obs)
+    probs = dict(zip(np.round(bn[1],1),bn[0]/N_b))
+    #log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
+    bn_mat = (1-alp)*bn[0]/N_b+alp
+    return log_scr, bn_mat
+
+def uncer_Gaussker(yp_fct, ms_fct, pred_err, bin_ed, alp=1e-5):
+    '''Puts the bootstrap samples provided by fct_uncert function into bins with bin edges given by bin_ed'''
+    std_err = np.std(pred_err)
+    bn_mat = np.exp(-((bin_ed[:-1]-np.exp(yp_fct))/(2*3*std_err))**2)
+#         plt.subplot(ms_fct,1,i+1)
+    #log_scr = np.log(probs[np.floor(np.exp(test)*10)/10.])
+    bn_mat = (1-alp)*bn_mat/np.sum(bn_mat)+(alp)
+    return bn_mat
+
+def create_bootstrap(train, pred_err, coeffs, lags_app, win):
+    '''Create bootstrap samples given the prediction error and the AR model'''
+#     pdb.set_trace()
+    lags_app = lags_app[lags_app!=0].astype(int)
+    y = np.flip(train)
+    ind = y.index
+    err_b = np.random.choice(pred_err,win)
+    max_lag = np.max(lags_app).astype('int')    
+    yb_temp = np.zeros((win+max_lag))
+    yb_temp[win:] = y[win:(win+max_lag)]
+    for i in range(win):
+        yb_temp[(win-i-1)] = np.dot(yb_temp[win-(i+1)+lags_app]+err_b[i], coeffs[lags_app])
+#     pdb.set_trace()
+    yb = yb_temp[0:win]
+    ind = ind[0:win]
+#     yp = yb[-1::-1]
+#     ind = ind[-1::-1]
+    return yb, ind
 
 

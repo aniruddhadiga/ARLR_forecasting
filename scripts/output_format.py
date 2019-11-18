@@ -77,7 +77,7 @@ def outputdistribution_bst(predictions,bn_mat, bins, region, target, directory, 
         output.to_csv(filepath, mode='a', index=False, header=False)  
     return
 
-def outputdistribution_Gaussker(predictions,bn_mat, bins, region, target, directory, epi_wk):
+def outputdistribution_Gaussker(predictions,bn_mat, bins, region, directory, epi_wk):
     if region=='National':
         region = 'US National'
     if (region[len(region)-1]).isdigit():
@@ -154,11 +154,102 @@ def outputdistribution_fromtemplate(predictions,bn_mat, bins, region, target, di
 
     filepath = os.path.join(directory,filename)
     if not os.path.isfile(filepath):
-        tpl_path = '/project/biocomplexity/aniadiga/Forecasting/cdc-flusight-ensemble/model-forecasts/component-models/Delphi_Uniform'
+        tpl_path = 'data/Delphi_Uniform'
         if str(epi_wk.year) == '2014':
             tpl_file = 'EW01-2014-Delphi_Uniform.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
         else:
             tpl_file = 'EW01-2011-Delphi_Uniform.csv'
+    
+        tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
+        tpl_df.to_csv(filepath, index=False)
+        df = pd.read_csv(filepath)
+    else:
+        df = pd.read_csv(filepath)
+    
+    for i in range(predictions.shape[0]):
+        targ_week = '{} wk ahead'.format(i+1)
+        mask1 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Point')
+        mask2 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Bin')
+        df.loc[mask1,'Value'] = predictions[i]
+        df.loc[mask2,'Value'] = bn_mat[:,i]
+    
+    df.to_csv(filepath, mode='w', index=False)
+    return
+
+def outputdistribution_fromtemplate_for_FSN(predictions,bn_mat, bins, region, target, directory, epi_wk):
+    if region=='National':
+        region = 'US National'
+    if (region[len(region)-1]).isdigit():
+        region = 'HHS ' + region
+
+    filename_FSN = 'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-FluX_ARLR'+ '.csv'
+
+    filepath = os.path.join(directory,filename_FSN)
+    if not os.path.isfile(filepath):
+        tpl_path = 'data/Delphi_Uniform'
+        if str(epi_wk.year) == '2014':
+            tpl_file = 'EW01-2014-Delphi_Uniform.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
+        else:
+            tpl_file = 'EW01-2011-Delphi_Uniform.csv'
+    
+        tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
+        tpl_df.to_csv(filepath, index=False)
+        df = pd.read_csv(filepath)
+    else:
+        df = pd.read_csv(filepath)
+    
+    for i in range(predictions.shape[0]):
+        targ_week = '{} wk ahead'.format(i+1)
+        mask1 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Point')
+        mask2 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Bin')
+        df.loc[mask1,'Value'] = predictions[i]
+        df.loc[mask2,'Value'] = bn_mat[:,i]
+    
+    df.to_csv(filepath, mode='w', index=False)
+    return
+    
+def outputdistribution_fromtemplate_for_FluSight(predictions,bn_mat, bins, region, target, directory, epi_wk, sub_date):
+    if region=='National':
+        region = 'US National'
+    if (region[len(region)-1]).isdigit():
+        region = 'HHS ' + region
+
+    filename_FluSight = 'EW' +'{:02}'.format(epi_wk.week) + '-FluX_ARLR-'+ sub_date + '.csv'
+
+    filepath = os.path.join(directory,filename_FluSight)
+    if not os.path.isfile(filepath):
+        tpl_path = 'data/Delphi_Uniform'
+        if str(epi_wk.year) == '2014':
+            tpl_file = 'EW01-2014-Delphi_Uniform.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
+        else:
+            tpl_file = 'EW01-2011-Delphi_Uniform.csv'
+    
+        tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
+        tpl_df.to_csv(filepath, index=False)
+        df = pd.read_csv(filepath)
+    else:
+        df = pd.read_csv(filepath)
+    
+    for i in range(predictions.shape[0]):
+        targ_week = '{} wk ahead'.format(i+1)
+        mask1 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Point')
+        mask2 = (df.Location==region)&(df.Target==targ_week)&(df.Type=='Bin')
+        df.loc[mask1,'Value'] = predictions[i]
+        df.loc[mask2,'Value'] = bn_mat[:,i]
+    
+    df.to_csv(filepath, mode='w', index=False)
+    return
+
+def outputdistribution_state_fromtemplate(predictions,bn_mat, bins, region, target, directory, epi_wk, sub_date):
+    filename_FluSight = 'EW' +'{:02}'.format(epi_wk.week) + '-FluX_ARLR-'+'StateILI-' + sub_date + '.csv'
+
+    filepath = os.path.join(directory,filename_FluSight)
+    if not os.path.isfile(filepath):
+        tpl_path = 'data/'
+        if str(epi_wk.year) == '2014':
+            tpl_file = 'stateili_submission_template_2019_2020.csv'#'EW' +'{:02}'.format(epi_wk.week) + '-' + str(epi_wk.year)+ '-Delphi_Uniform'+ '.csv'
+        else:
+            tpl_file = 'stateili_submission_template_2019_2020.csv'
     
         tpl_df = pd.read_csv(os.path.join(tpl_path,tpl_file))
         tpl_df.to_csv(filepath, index=False)
