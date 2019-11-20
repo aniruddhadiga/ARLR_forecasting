@@ -32,7 +32,7 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 
-from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro
 from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin
 
 from output_format import outputdistribution_bst, outputdistribution_Gaussker,accu_output, outputdistribution_fromtemplate, outputdistribution_fromtemplate_for_FSN, outputdistribution_fromtemplate_for_FluSight, outputdistribution_state_fromtemplate
@@ -144,7 +144,6 @@ def main():
 
     end_date = args.end_date
     fdf = prepdata_flux(csv_path, ews)
-    pdb.set_trace()
     fdf = fdf.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
     if end_date is None:
         end_date = fdf['date'].max().date() + timedelta(days=3)
@@ -204,8 +203,8 @@ def main():
         ght_target = ['flu', 'cough', 'fever', 'influenza', 'cold']
     
            
-    directory_bst = args.out_folder + 'ARLR_bst/' + str(args.forecast_from)
-    directory_Gaussker = args.out_folder + 'ARLR_Gaussker/' + str(args.forecast_from)
+    directory_bst = args.out_folder + 'ARLR_bst/'# + str(args.forecast_from[:4])
+    directory_Gaussker = args.out_folder + 'ARLR_Gaussker/'# + str(args.forecast_from[:4])
     
     if not os.path.exists(directory_bst):
         os.makedirs(directory_bst)
@@ -247,7 +246,7 @@ def main():
                 #outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
                 #outputdistribution_Gaussker(predictions[0,0:4], bn_mat_Gaussker[:,0:4], bin_ed, region, target, directory_Gaussker, ews)
             outputdistribution_fromtemplate_for_FSN(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews)
-            outputdistribution_fromtemplate_for_FluSight(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews, sub_date)
+            #outputdistribution_fromtemplate_for_FluSight(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews, sub_date)
 
  
    

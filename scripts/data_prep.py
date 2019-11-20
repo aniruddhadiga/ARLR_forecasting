@@ -71,21 +71,24 @@ def prepdata(csv_path):
     return df
     
 def prepdata_retro(csv_path,epwk):
-    nat_csv_file = csv_path + '/' +'national/'+'ILINet_national_' + epwk + '.csv'
+    nat_csv_file = csv_path + '/' +'national/'+'ILINet_National_' + str(epwk) + '.csv'
     df = pd.read_csv(nat_csv_file, na_values='X')
-    
-    hhs_csv_file = csv_path +'/'+'hhs/'+'ILINet_HHS_' + epwk + '.csv'
+    df['REGION'] = df['REGION'].fillna('National')
+    hhs_csv_file = csv_path +'/'+'hhs/'+'ILINet_HHS_' + str(epwk) + '.csv'
     df = df.append(pd.read_csv(hhs_csv_file,na_values='X'))
     df['REGION'] = df['REGION'].fillna('National')
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+    return df
 
 def prepdata_flux(csv_path,epwk):
-    pdb.set_trace()
     nat_csv_file = csv_path + '/'+'ILINet_national_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
     df = pd.read_csv(nat_csv_file, na_values='X')
     df['region'] = df['region'].fillna('National')
     hhs_csv_file = csv_path +'/'+ 'ILINet_hhs_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
     df = df.append(pd.read_csv(hhs_csv_file,na_values='X'))
+    state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
+    df = df.append(pd.read_csv(state_csv_file,na_values='X'))
+
     df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
     
     return df
