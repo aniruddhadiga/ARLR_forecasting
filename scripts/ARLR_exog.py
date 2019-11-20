@@ -396,8 +396,8 @@ def ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f):
 #         data_frame = data_frame.append(test[new_wks:(new_wks+1)])
 #         data_test = data_test[1:]
         yp_fct[new_wks,:], yb_fct[new_wks,:,:], log_scr[new_wks,:], bn_mat_bst[new_wks, :,:], bn_mat_Gaussker[new_wks, :,:], train_pred_err = multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_dict, ms_fct, win, Nb, bin_ed, uncer_anl)
-    
-    seas, err_p = ARLR_fct_exog(coeffs[0,:],df_m,lags_app[0,:],30,0, allw_lags, targ_dict)
+    seas_len = len(range((ews.week-40+1),35))  
+    seas, err_p = ARLR_fct_exog(coeffs[0,:],df_m,lags_app[0,:],seas_len,0, allw_lags, targ_dict)
 #     seas = 0
     return (yp_fct), bn_mat_bst, bn_mat_Gaussker, seas, lags_app,coeffs
 
