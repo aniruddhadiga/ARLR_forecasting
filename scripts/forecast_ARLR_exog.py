@@ -89,7 +89,7 @@ def parse_args():
     ap.add_argument('--ght_data_hhs', required=False, help='google health trends data stream')
     ap.add_argument('--ght_data_state', required=False, help='google health trends data stream')
     ap.add_argument('--sub_date', required=False, help='Submission date for FluSight output file, if not mentioned automatically computed to Monday date')
- 
+    ap.add_argument('--eval', required=False, help='evaluation mode for determing accuracy of forecasts, expects the input data frame to contain data for full season') 
 
     return ap.parse_args()
 
@@ -219,11 +219,14 @@ def main():
         sub_date = args.sub_date
     else:
         sub_date = ((ews+1).enddate()+timedelta(days=2)).isoformat() #submission for epiweek N is (epiweek N+1).enddate() + timedelta(days=2)
-    df_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
-    idx = [(ews+i).startdate() for i in range((ews.week-40+1),35)]
-    df_res['DATE'] = idx
-    df_res = df_res.set_index('DATE')
+    df_full_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
+    df_full_res = df_full_res.set_index('DATE')
     for region in fdf[header_region].unique():
+        df_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
+        idx = [(ews+i).startdate() for i in range((ews.week-40+1),35)]
+        df_res['DATE'] = idx
+        df_res = df_res.set_index('DATE')
+
         targ_dict['target'] = [targets['flux_ili'], targets['flux_wili']]
         if fdf[header_region_type][fdf[header_region]==region].unique() == 'States':
             print(region)
@@ -234,6 +237,7 @@ def main():
             for v in targ_dict.values():
                 if targets['flux_ili'] in v:
                     v.remove(targets['flux_ili'])
+        
         win = int(config['Forecasting']['win']) # training window
         max_lag = np.max(allw_lags_f) # maximum lag considered in the model
         # Check if datastream has no missing information for all lagged regressors of length equal to training length window  
@@ -247,15 +251,17 @@ def main():
             print('Week: {}, Fct: {}'.format(i,(predictions[0,i-1])))
             df_res.loc[(ews+i).startdate(), 'location'] = region
             df_res.loc[(ews+i).startdate(), '{} week ahead'.format(i)] = predictions[0,i-1]
-            df_res.loc[(ews+i).startdate(), targ_dict['target']] = fdf[(fdf.index==pd.to_datetime((ews+i).startdate())) &(fdf.REGION==region)][targ_dict['target']].values[0]
-        idx = [(ews_2018+i).startdate() for i in range((ews.week-40+1),35)]
+            if args.eval is not None:
+                df_res.loc[(ews+i).startdate(), targ_dict['target']] = fdf[(fdf.index==pd.to_datetime((ews+i).startdate())) &(fdf[header_region]==region)][targ_dict['target']].values[0]
+        idx = [(ews+i).startdate() for i in range(1, len(range((ews.week)-40,35)))]
         df_seas = pd.DataFrame(columns=['season', 'location'])
         df_seas['DATE'] = idx
         df_seas['location'] = df_seas.apply(lambda x: region, axis=1)
         df_seas.loc[:,'season'] = seas
         df_seas = df_seas.set_index('DATE')
-        df_res.merge(df_seas, how='outer', left_index=True, right_index=True)
-        df_res.to_csv('result_'+str(ews.year) + 'EW' + str(ews.week))
+        df_res = df_res.merge(df_seas, how='outer', left_index=True, right_index=True)
+    
+        df_full_res = df_full_res.append(df_res)    
         if int(args.CDC) and fdf[header_region_type][fdf[header_region]==region].unique() != 'States':
             target = targets['flux_wili'] 
                 #outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
@@ -269,6 +275,7 @@ def main():
             target = targets['flux_ili'] 
             accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
             outputdistribution_state_fromtemplate(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews, sub_date)
+    df_full_res.to_csv('result_'+str(ews.year) + 'EW' + str(ews.week))
 if __name__ == "__main__":
     main()
    
