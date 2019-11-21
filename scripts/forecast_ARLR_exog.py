@@ -221,6 +221,11 @@ def main():
         sub_date = ((ews+1).enddate()+timedelta(days=2)).isoformat() #submission for epiweek N is (epiweek N+1).enddate() + timedelta(days=2)
     df_full_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
     df_full_res = df_full_res.set_index('DATE')
+    df_full_seas = pd.DataFrame(columns=['season', 'location'])
+    idx = [(ews+i).startdate() for i in range(1, len(range((ews.week)-40,35)))]
+    df_full_seas = pd.DataFrame(columns=['season', 'location'])
+    df_full_seas['DATE'] = idx
+
     for region in fdf[header_region].unique():
         df_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
         idx = [(ews+i).startdate() for i in range((ews.week-40+1),35)]
@@ -259,9 +264,10 @@ def main():
         df_seas['location'] = df_seas.apply(lambda x: region, axis=1)
         df_seas.loc[:,'season'] = seas
         df_seas = df_seas.set_index('DATE')
-        df_res = df_res.merge(df_seas, how='outer', left_index=True, right_index=True)
-    
+        #df_res = df_res.merge(df_seas, how='outer', left_index=True, right_index=True)
+        
         df_full_res = df_full_res.append(df_res)    
+        df_full_seas = df_full_seas.append(df_seas)
         if int(args.CDC) and fdf[header_region_type][fdf[header_region]==region].unique() != 'States':
             target = targets['flux_wili'] 
                 #outputdistribution_bst(predictions[0,0:4], bn_mat_bst[0,:,0:4], bin_ed, region, target, directory_bst, ews)
@@ -276,6 +282,7 @@ def main():
             accu_output(predictions.reshape(fct_weeks), region,  args.out_state, ews, args.st_fips)
             outputdistribution_state_fromtemplate(predictions[0,0:4], bn_mat_Gaussker[0,:,0:4], bin_ed, region, target, directory_Gaussker, ews, sub_date)
     df_full_res.to_csv('result_'+str(ews.year) + 'EW' + str(ews.week))
+    df_full_seas.to_csv('result_seas_'+str(ews.year) + 'EW' + str(ews.week))
 if __name__ == "__main__":
     main()
    
