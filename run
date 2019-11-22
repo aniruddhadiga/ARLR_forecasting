@@ -5,19 +5,22 @@
 #sbatch job.sbatch $year
 #done
 
-i=201840
+i=201740
 
-while [ $i -lt 201853 ]
+while [ $i -lt 201753 ]
 do
 echo $i
 sbatch job.sbatch $i
 i=$(($i+1))
 done
 
-j=201901
-while [ $j -lt 201921 ]
+j=201801
+while [ $j -lt 201821 ]
 do
 echo $j
 sbatch job.sbatch $j
 j=$(($j+1))
 done
+
+. R_load
+Rscript score_submission.R 2017 no_exog/ scores_2017_no.csv
