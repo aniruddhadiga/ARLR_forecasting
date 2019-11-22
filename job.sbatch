@@ -17,8 +17,7 @@ export CONDA_ROOT="/home/$USER/miniconda3"
 source "$CONDA_ROOT/etc/profile.d/conda.sh"
 conda activate fct
 
-python scripts/forecast_ARLR_exog.py -b $1 -w 4 --out_folder dump/all_exog/2018/ --ground_truth /project/biocomplexity/forecast/cdcfluview/ -v --CDC 1 --st_fips data/state_fips.csv --out_state output/predictions.txt  --accu_data_state data/data-aw-whole_20191108_1605-weekly-state.csv --accu_data_hhs data/data-aw-whole_20191108_1605-weekly-hhs.csv --accu_data_nat data/data-aw-whole_20191108_1605-weekly-nation.csv --ght_data_state data/ght_state-201947.csv --ght_data_hhs data/ght_hhs-201947.csv --ght_data_nat data/ght_national-201947.csv
-
+python scripts/forecast_ARLR_exog.py -b $1 -w 4 --out_folder dump/all_exog/2017/ --ground_truth /project/biocomplexity/forecast/cdcfluview/ -v --CDC 1 --st_fips data/state_fips.csv --out_state output/predictions.txt --mode retro --accu_data_state data/data-aw-whole_20191108_1605-weekly-state.csv --accu_data_hhs data/data-aw-whole_20191108_1605-weekly-hhs.csv --accu_data_nat data/data-aw-whole_20191108_1605-weekly-nation.csv --mode retro --ght_data_state data/ght_state-201947.csv --ght_data_hhs data/ght_hhs-201947.csv --ght_data_nat data/ght_national-201947.csv
 #python scripts/retro_forecast_ARLR.py -b $1 -w 4 --out_folder int_retro_output/ --ground_truth /project/biocomplexity/forecast/cdcfluview/ -v --CDC 1 --test 1
 
 
