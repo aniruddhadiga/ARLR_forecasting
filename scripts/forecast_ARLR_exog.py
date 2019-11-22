@@ -222,14 +222,14 @@ def main():
     df_full_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
     df_full_res = df_full_res.set_index('DATE')
     df_full_seas = pd.DataFrame(columns=['season', 'location'])
-    idx = [(ews+i).startdate() for i in range(1, len(range((ews.week)-40,35)))]
+    idx_fct = [(ews+i).startdate() for i in range(1, fct_weeks+1)]
     df_full_seas = pd.DataFrame(columns=['season', 'location'])
-    df_full_seas['DATE'] = idx
+    df_full_seas['DATE'] = idx_fct
 
     for region in fdf[header_region].unique():
         df_res = pd.DataFrame(columns=['DATE','location', '1 week ahead', '2 week ahead', '3 week ahead', '4 week ahead', targ_dict['target'][0]])
-        idx = [(ews+i).startdate() for i in range((ews.week-40+1),35)]
-        df_res['DATE'] = idx
+        idx_fct = [(ews+i).startdate() for i in range(1, fct_weeks+1)]
+        df_res['DATE'] = idx_fct
         df_res = df_res.set_index('DATE')
 
         targ_dict['target'] = [targets['flux_ili'], targets['flux_wili']]
