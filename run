@@ -4,18 +4,18 @@
 #do
 #sbatch job.sbatch $year
 #done
+year=2018
+i=$((year))40
 
-i=201740
-
-while [ $i -lt 201753 ]
+while [ $i -lt $((year))53 ]
 do
 echo $i
 sbatch job.sbatch $i
 i=$(($i+1))
 done
 
-j=201801
-while [ $j -lt 201821 ]
+j=$((year+1))01
+while [ $j -lt $((year+1))21 ]
 do
 echo $j
 sbatch job.sbatch $j
@@ -23,4 +23,7 @@ j=$(($j+1))
 done
 
 . R_load
-Rscript score_submission.R 2017 no_exog/ scores_2017_no.csv
+varibs=all
+input_filename=${varibs}_exog/
+score_filename=scores_$((year))_$varibs.csv 
+Rscript score_submission.R $year no_exog/ $score_filename
