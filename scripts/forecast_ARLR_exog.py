@@ -90,7 +90,7 @@ def parse_args():
     ap.add_argument('--ght_data_state', required=False, help='google health trends data stream')
     ap.add_argument('--sub_date', required=False, help='Submission date for FluSight output file, if not mentioned automatically computed to Monday date')
     ap.add_argument('--eval', required=False, help='evaluation mode for determing accuracy of forecasts, expects the input data frame to contain data for full season') 
-
+    ap.add_argument('--mode', required=True, help="tells the system which mode to work in (typically address the data header inconsistencies)")
     return ap.parse_args()
 
 
@@ -143,7 +143,13 @@ def main():
     
 
     end_date = args.end_date
-    fdf = prepdata_flux(csv_path, ews)
+    if args.mode == "retro":
+        fdf = prepdata_retro(csv_path, ews)
+    if args.mode == "data":
+        fdf = prepdata_retro(csv_path, ews)
+    if args.mode == "test":
+        fdf = prepdata_append(cav_path, ews)
+
     fdf = fdf.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
     if end_date is None:
         end_date = fdf['date'].max().date() + timedelta(days=3)
