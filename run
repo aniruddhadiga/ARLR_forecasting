@@ -22,8 +22,8 @@ sbatch job.sbatch $j
 j=$(($j+1))
 done
 
-. R_load
-varibs=all
-input_filename=${varibs}_exog/
-score_filename=scores_$((year))_$varibs.csv 
-Rscript score_submission.R $year no_exog/ $score_filename
+#. R_load
+#varibs=all
+#input_filename=${varibs}_exog/
+#score_filename=scores_$((year))_$varibs.csv 
+#Rscript score_submission.R $year input_filename $score_filename
