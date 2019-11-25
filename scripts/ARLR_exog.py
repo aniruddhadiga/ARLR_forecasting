@@ -50,7 +50,15 @@ def indices_to_rgsrs(lags_ind, allw_lags, all_exog_rgsr):
             rgsrs_names.append(ind_to_rgsr(ind,allw_lags,all_exog_rgsr))
     return rgsrs_names
                             
-
+def wtr_shifter(df_wtr_reg, mask_targ_dict,num_shift):
+    for tar in mask_targ_dict['aw_target']:
+        for i in range(0,num_shift+1):
+            label = '{}_{}'.format(tar,i)
+            df_wtr_reg[label] = df_wtr_reg[tar].shift(i)
+        df_wtr_reg=df_wtr_reg.drop(tar,axis=1)
+    mask_targ_dict['aw_target'] = df_wtr_reg.columns[4:].to_list()
+    return df_wtr_reg, mask_targ_dict
+     
 def ARLR_regressor(df, df_wtr, df_ght, region, mask_targ_dict, ews):
     '''If we have other regressors, need a for loop'''
     ews_1 = ews+1 # we need ght and weather data for forecst week, hence +1
@@ -63,23 +71,25 @@ def ARLR_regressor(df, df_wtr, df_ght, region, mask_targ_dict, ews):
     if df_ght.empty and not df_wtr.empty:
         df_m = pd.merge(df_m,df_ght,how='outer', left_index=True, right_index=True)
         df_wtr_reg = df_wtr[df_wtr['region']==region]
+        df_wtr_reg, mask_targ_dict_up = wtr_shifter(df_wtr_reg, mask_targ_dict,5)
         df_m = pd.merge(df_reg,df_wtr_reg,how='outer', left_index=True, right_index=True)
     elif not df_ght.empty and not df_wtr.empty:
         df_wtr_reg = df_wtr[df_wtr['region']==region]
+        df_wtr_reg, mask_targ_dict_up = wtr_shifter(df_wtr_reg, mask_targ_dict,5)
         df_ght_reg = df_ght[df_ght['region']==region]
         df_m = pd.merge(df_m,df_wtr_reg,how='outer', left_index=True, right_index=True)
         df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
-    
+     
     mask_targ = []
-    for k in list(mask_targ_dict):
-        mask_targ = mask_targ+(mask_targ_dict[k])
+    for k in list(mask_targ_dict_up):
+        mask_targ = mask_targ+(mask_targ_dict_up[k])
     df_m = df_m[mask_targ]
     df_m = df_m[df_m.index<=pd.to_datetime((ews_1).startdate())].fillna(1e-2)
-    df_m[mask_targ_dict['target']] = np.log(df_m[mask_targ_dict['target']])
+    df_m[mask_targ_dict_up['target']] = np.log(df_m[mask_targ_dict_up['target']])
     df_m = df_m.replace(-np.inf, np.nan)
     df_m = df_m.interpolate()
-    df_m[mask_targ_dict['ght_target']] = (df_m[mask_targ_dict['ght_target']])
-    df_m[mask_targ_dict['aw_target']] = (df_m[mask_targ_dict['aw_target']])
+    df_m[mask_targ_dict_up['ght_target']] = (df_m[mask_targ_dict_up['ght_target']])
+    df_m[mask_targ_dict_up['aw_target']] = (df_m[mask_targ_dict_up['aw_target']])
     return df_m
     
 

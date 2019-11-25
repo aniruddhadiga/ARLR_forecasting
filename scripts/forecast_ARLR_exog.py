@@ -148,7 +148,7 @@ def main():
     if args.mode == "data":
         fdf = prepdata_retro(csv_path, ews)
     if args.mode == "test":
-        fdf = prepdata_append(cav_path, ews)
+        fdf = prepdata_append(csv_path)
 
     fdf = fdf.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
     if end_date is None:
@@ -176,9 +176,12 @@ def main():
         df_ght = pd.DataFrame()
         df_wtr = pd.DataFrame()
         targ_dict = {"target" : [targets['flux_ili'],targets['flux_wili']],"ght_target" : [], "aw_target" : []}
+    
     elif ght_data_fl is None and accu_data_fl is not None:
         df_ght = pd.DataFrame()
-        targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
+        aw_target = ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min', 'SH_mean']
+
+        targ_dict = {"target" : [targets['ili'],targets['wili']], "ght_target" : [], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min', 'SH_mean']}#, 'wind_speed_mean']}
         #aw_csv_path = args.accu_data#'../data/data-aw-cumulative_20191018_1620-weekly-state.csv'
      
         df_wtr = prep_aw_data(st_id_path, **kwargs_wtr)
@@ -194,7 +197,8 @@ def main():
         ght_target = ['flu', 'cough', 'fever', 'influenza', 'cold']
 
     else:
-        targ_dict = {"target" : [targets['flux_ili'],targets['flux_wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min']}#, 'wind_speed_mean']}
+        aw_target = ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min', 'SH_mean']
+        targ_dict = {"target" : [targets['flux_ili'],targets['flux_wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : ['temperature_max', 'temperature_min','temperature_mean', 'RH_max', 'RH_min', 'RH_mean', 'wind_speed_mean','cloud_cover_mean', 'water_total', 'pressure_max', 'pressure_min','pressure_mean', 'AH_max', 'AH_min', 'AH_mean', 'SH_max', 'SH_min','SH_mean']}#, 'wind_speed_mean']}
         # weather data
         #aw_csv_path = args.accu_data
         df_wtr = prep_aw_data(st_id_path, **kwargs_wtr)
@@ -239,6 +243,7 @@ def main():
         df_res = df_res.set_index('DATE')
 
         targ_dict['target'] = [targets['flux_ili'], targets['flux_wili']]
+        targ_dict['aw_target'] = aw_target
         if fdf[header_region_type][fdf[header_region]==region].unique() == 'States':
             print(region)
             for v in targ_dict.values():
