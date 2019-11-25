@@ -102,7 +102,7 @@ def download_ght_by_states_today(kw_list):
         df.to_csv(filename)
     return df
 
-state_ght_csv = filepath+'ght_state-201946.csv'
+state_ght_csv = filepath+'ght_state-201947.csv'
 cty_pops_csv = filepath+'countypops_2013.csv'
 st_hhs_csv = filepath+'state_hhs_map.csv'
 pdb.set_trace()
