@@ -32,7 +32,7 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 
-from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro, prepdata_state
 from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin
 
 from output_format import outputdistribution_bst, outputdistribution_Gaussker,accu_output, outputdistribution_fromtemplate, outputdistribution_fromtemplate_for_FSN, outputdistribution_fromtemplate_for_FluSight, outputdistribution_state_fromtemplate
@@ -88,6 +88,7 @@ def parse_args():
     ap.add_argument('--ght_data_nat', required=False, help='google health trends data stream')
     ap.add_argument('--ght_data_hhs', required=False, help='google health trends data stream')
     ap.add_argument('--ght_data_state', required=False, help='google health trends data stream')
+    ap.add_argument('--state_exog', required=False, help='state data as exog variables')
     ap.add_argument('--sub_date', required=False, help='Submission date for FluSight output file, if not mentioned automatically computed to Monday date')
     ap.add_argument('--eval', required=False, help='evaluation mode for determing accuracy of forecasts, expects the input data frame to contain data for full season') 
     ap.add_argument('--mode', required=True, help="tells the system which mode to work in (typically address the data header inconsistencies)")
@@ -149,7 +150,8 @@ def main():
         fdf = prepdata_retro(csv_path, ews)
     if args.mode == "test":
         fdf = prepdata_append(csv_path)
-
+    
+    
     fdf = fdf.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
     if end_date is None:
         end_date = fdf['date'].max().date() + timedelta(days=3)
@@ -186,6 +188,8 @@ def main():
      
         df_wtr = prep_aw_data(st_id_path, **kwargs_wtr)
         
+        df_state = prepdata_state(csv_path, ews)
+        pdb.set_trace()    
     elif accu_data_fl is None and ght_data_fl is not None:
         df_wtr = pd.DataFrame()
         targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : []}
