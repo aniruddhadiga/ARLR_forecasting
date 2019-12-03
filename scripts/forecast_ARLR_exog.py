@@ -32,7 +32,8 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 
-from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro, prepdata_state
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro 
+#prepdata_state
 from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin
 
 from output_format import outputdistribution_bst, outputdistribution_Gaussker,accu_output, outputdistribution_fromtemplate, outputdistribution_fromtemplate_for_FSN, outputdistribution_fromtemplate_for_FluSight, outputdistribution_state_fromtemplate
@@ -146,8 +147,8 @@ def main():
     end_date = args.end_date
     if args.mode == "retro":
         fdf = prepdata_retro(csv_path, ews)
-    if args.mode == "data":
-        fdf = prepdata_retro(csv_path, ews)
+    if args.mode == "flux":
+        fdf = prepdata_flux(csv_path, ews)
     if args.mode == "test":
         fdf = prepdata_append(csv_path)
     
@@ -188,8 +189,8 @@ def main():
      
         df_wtr = prep_aw_data(st_id_path, **kwargs_wtr)
         
-        df_state = prepdata_state(csv_path, ews)
-        pdb.set_trace()    
+        #df_state = prepdata_state(csv_path, ews)
+        #pdb.set_trace()    
     elif accu_data_fl is None and ght_data_fl is not None:
         df_wtr = pd.DataFrame()
         targ_dict = {"target" : [targets['ili'], targets['wili']], "ght_target" : ['flu', 'cough', 'fever', 'influenza', 'cold'], "aw_target" : []}

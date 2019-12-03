@@ -173,38 +173,38 @@ def prep_ght_data(**kwargs):
 #
 #    return df
 
-def prepdata_state(csv_path,epwk):
-    pdb.set_trace()
-    state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
-    df = pd.read_csv(state_csv_file,na_values='X')
-
-    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
-    df.index = df.index.rename('DATE')
-    df_state = pd.DataFrame()
-    df_state.index = df.index
-    for st in df.region.unique():
-        df_state.loc[:,st] = df.loc[:,st]
-    return df_state
-
-def diff_op(df, target, diff_op)
-    if diff_op == 'diff_1':
-        df.loc[:,'lag_comp1'] = df[target].shift()   
-        df.loc[:,'true_ili'] = df.loc[:,target]
-        df[:,target] = df['true_ili']-df['true_ili'].shift()
-    elif diff_op == 'no_diff':
-        df['true_ili'] = df[target]
-    
-    return df
-
-def int_op(yp, df, target, ews, diff_op)
-    if diff_op == 'diff_1':
-        mask_fct_0 = df.index==pd.to_datetime(ews.startdate())
-        mask_fct_1 = df.index==pd.to_datetime((ews+1).startdate())
-        y_diff_comp = df[mask_fct_0].loc[:,'lag_comp1'].values
-
-        yp[0,:] = yp[0,:]+y_diff_comp
-        yp[0,:] = np.exp(yp[0,:])
-    elif diff_op='no_diff':
-        yp[0,:] = np.exp(yp[0,:])
-    
-    return yp      
+#def prepdata_state(csv_path,epwk):
+#    pdb.set_trace()
+#    state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
+#    df = pd.read_csv(state_csv_file,na_values='X')
+#
+#    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
+#    df.index = df.index.rename('DATE')
+#    df_state = pd.DataFrame()
+#    df_state.index = df.index
+#    for st in df.region.unique():
+#        df_state.loc[:,st] = df.loc[:,st]
+#    return df_state
+#
+#def diff_op(df, target, diff_op)
+#    if diff_op == 'diff_1':
+#        df.loc[:,'lag_comp1'] = df[target].shift()   
+#        df.loc[:,'true_ili'] = df.loc[:,target]
+#        df[:,target] = df['true_ili']-df['true_ili'].shift()
+#    elif diff_op == 'no_diff':
+#        df['true_ili'] = df[target]
+#    
+#    return df
+#
+#def int_op(yp, df, target, ews, diff_op)
+#    if diff_op == 'diff_1':
+#        mask_fct_0 = df.index==pd.to_datetime(ews.startdate())
+#        mask_fct_1 = df.index==pd.to_datetime((ews+1).startdate())
+#        y_diff_comp = df[mask_fct_0].loc[:,'lag_comp1'].values
+#
+#        yp[0,:] = yp[0,:]+y_diff_comp
+#        yp[0,:] = np.exp(yp[0,:])
+#    elif diff_op='no_diff':
+#        yp[0,:] = np.exp(yp[0,:])
+#    
+#    return yp      
