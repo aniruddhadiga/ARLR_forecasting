@@ -190,20 +190,20 @@ def ARLR_red_phase_exog(y,tr_tp,err_old, lags, res1, lags_app,ind, win, llr_tol)
                 res = sm.OLS(y_obs,np.delete(temp_tr_tp,k,1)).fit()
                 yp = res.predict()
                 err_m[jj] = np.linalg.norm(y_obs-yp)
-                llr[jj] = 2*np.log(err_old/err_m[jj])
+                llr[jj] = 2*np.log(err_m[jj]/err_old)
                 jj+=1
             try:
                 imin = np.argmin(llr)
             except:
                 pdb.set_trace()
-#             if (llr[imin]>llr_tol):
-#                 temp_tr_tp = np.delete(temp_tr_tp,imin,1) 
-#                 lags_app.remove(lags_app[imin])
-#                 err_old = err_m[imin]
-# #                 pdb.set_trace()
-#             else:
-# #                 pdb.set_trace()
-#                 break
+            if (llr[imin]<llr_tol):
+                temp_tr_tp = np.delete(temp_tr_tp,imin,1) 
+                lags_app.remove(lags_app[imin])
+                err_old = err_m[imin]
+#                 pdb.set_trace()
+            else:
+#                 pdb.set_trace()
+                break
 
     res = sm.OLS(y_obs,temp_tr_tp).fit()
     yp = res.predict()
