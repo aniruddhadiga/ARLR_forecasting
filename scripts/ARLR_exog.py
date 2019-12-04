@@ -11,6 +11,7 @@ import configparser
 import pkg_resources
 import warnings
 warnings.filterwarnings('ignore')
+from data_prep import diff_op, int_op
 # ARLR functions
 def get_bin():    
     bin_ed= [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9, 9.0, 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 9.9, 10.0, 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 10.8, 10.9, 11.0, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6, 11.7, 11.8, 11.9, 12.0, 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 13.0, 100]
@@ -64,6 +65,7 @@ def ARLR_regressor(df, df_wtr, df_ght, region, mask_targ_dict, ews):
     ews_1 = ews+1 # we need ght and weather data for forecst week, hence +1
     df_reg = df[df['region']==region]
     df_m = df_reg
+    #df_m, df_ex = diff_op(df_reg,mask_targ_dict['target'],'no_diff')
     if df_wtr.empty and not df_ght.empty:
         df_m = pd.merge(df_m,df_wtr,how='outer', left_index=True, right_index=True)
         df_ght_reg = df_ght[df_ght['region']==region] 
@@ -126,7 +128,7 @@ def ARLR_aug_phase_exog(df_m, lags, targ_dict, win,llr_tol):
                 tr_tp[:,k] = y[(i+1):(win+i+1)]
             else:
                 #print(i)
-                exog_reg = (df_m[i]-df_m[i].shift()).values # reads the column name in the dataframe specified by name="i"
+                exog_reg = (df_m[i]).values # reads the column name in the dataframe specified by name="i"
                 exog_reg = np.flip(exog_reg)
                 exog_reg = exog_reg[min(lags_chk):(min(lags_chk)+win)] # Most recent date -1 week's data used for exog. variable for training 
                 tr_tp[:,k] = exog_reg[0:win]
@@ -275,7 +277,7 @@ def multi_step_fct_exog(df_m, coeffs, lags_app, train_pred_err, allw_lags,targ_d
 #            yb_fct[wks-1,:] = fct_uncert(df_m, train_pred_err[wks-1,:],coeffs[wks-1,:],lags_app[wks-1,:], win, Nb)
 #            log_scr[wks-1], bn_mat_bst[:, wks-1] = uncer_scr(yb_fct[wks-1,:], yp_fct[wks-1], ms_fct, Nb, bin_ed,1e-5)
             bn_mat_Gaussker[:, wks-1] = uncer_Gaussker(yp_fct[wks-1], ms_fct,train_pred_err[wks-1,:], bin_ed, 1e-5)
-        print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks,np.exp(yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
+       # print('Week: {}, Fct: {}, Bs: {}, log_scr: {}'.format(wks,(yp_fct[wks-1]), np.mean(np.exp(yb_fct[wks-1,:])), log_scr[wks-1]))
     return np.exp(yp_fct), yb_fct, log_scr, bn_mat_bst.reshape([131,ms_fct]), bn_mat_Gaussker.reshape([131,ms_fct]), train_pred_err
 
 def rgsrs_ARLR(coeffs, lags, targ_dict, ews):    

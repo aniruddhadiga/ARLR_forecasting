@@ -186,25 +186,25 @@ def prep_ght_data(**kwargs):
 #        df_state.loc[:,st] = df.loc[:,st]
 #    return df_state
 #
-#def diff_op(df, target, diff_op)
-#    if diff_op == 'diff_1':
-#        df.loc[:,'lag_comp1'] = df[target].shift()   
-#        df.loc[:,'true_ili'] = df.loc[:,target]
-#        df[:,target] = df['true_ili']-df['true_ili'].shift()
-#    elif diff_op == 'no_diff':
-#        df['true_ili'] = df[target]
-#    
-#    return df
-#
-#def int_op(yp, df, target, ews, diff_op)
-#    if diff_op == 'diff_1':
-#        mask_fct_0 = df.index==pd.to_datetime(ews.startdate())
-#        mask_fct_1 = df.index==pd.to_datetime((ews+1).startdate())
-#        y_diff_comp = df[mask_fct_0].loc[:,'lag_comp1'].values
-#
-#        yp[0,:] = yp[0,:]+y_diff_comp
-#        yp[0,:] = np.exp(yp[0,:])
-#    elif diff_op='no_diff':
-#        yp[0,:] = np.exp(yp[0,:])
-#    
-#    return yp      
+def diff_op(df, target, diff_op):
+    df_ex=pd.DataFrame(index=df.index)
+    if diff_op == 'diff_1':
+        df_ex.loc[:,'lag_comp1'] = df[target].shift().interpolate(limit_direction='both').values   
+        df_ex.loc[:,'true_ili'] = df.loc[:,target].values
+        df.loc[:,target] = (df_ex['true_ili']-df_ex['true_ili'].shift().interpolate(limit_direction='both')).values
+    elif diff_op == 'no_diff':
+        df_ex.loc[:,'true_ili'] = df[target].values
+    return df,df_ex
+
+def int_op(yp, df, target, ews, diff_op):
+    if diff_op == 'diff_1':
+        mask_fct_0 = df.index==pd.to_datetime(ews.startdate())
+        mask_fct_1 = df.index==pd.to_datetime((ews+1).startdate())
+        y_diff_comp = df[mask_fct_0].loc[:,'lag_comp1'].values
+
+        yp[0,:] = yp[0,:]+y_diff_comp
+        yp[0,:] = np.exp(yp[0,:])
+    elif diff_op=='no_diff':
+        yp[0,:] = np.exp(yp[0,:])
+    
+    return yp      

@@ -32,7 +32,7 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 
-from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro 
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro, int_op 
 #prepdata_state
 from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin
 
@@ -267,7 +267,8 @@ def main():
             print('Missing values in ILI data, cannot produce forecasts')
             continue    
         df_m  = ARLR_regressor(fdf, df_wtr, df_ght, region, targ_dict, ews)
-        predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f) 
+        predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f)
+        #predictions=int_op(predictions, df_ex, targ_dict['target'], ews, 'no_diff') 
         for i in range(1,len(predictions[0,:])+1):
             print('Week: {}, Fct: {}'.format(i,(predictions[0,i-1])))
             df_res.loc[(ews+i).startdate(), 'location'] = region
