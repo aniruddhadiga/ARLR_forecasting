@@ -4,13 +4,20 @@
 #do
 #sbatch job.sbatch $year
 #done
-year=2018
+#source ./R_load.sh
+varibs=all_state
+out_folder=dump/${varibs}_exog/
+years="2017 2018"
+for year in $years
+do
 i=$((year))40
+out_file=${out_folder}/${year}/
+score_filename=scores_$((year))_$varibs.csv 
 
 while [ $i -lt $((year))53 ]
 do
 echo $i
-sbatch job.sbatch $i
+sh job.sh $i $out_file
 i=$(($i+1))
 done
 
@@ -18,12 +25,10 @@ j=$((year+1))01
 while [ $j -lt $((year+1))21 ]
 do
 echo $j
-sbatch job.sbatch $j
+sh job.sh $j $out_file
 j=$(($j+1))
 done
 
-. R_load
-varibs=all
-input_filename=${varibs}_exog/
-score_filename=scores_$((year))_$varibs.csv 
-Rscript score_submission.R $year no_exog/ $score_filename
+
+#Rscript score_submission.R $year $out_folder $score_filename
+done

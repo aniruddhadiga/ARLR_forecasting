@@ -173,18 +173,28 @@ def prep_ght_data(**kwargs):
 #
 #    return df
 
-#def prepdata_state(csv_path,epwk):
-#    pdb.set_trace()
-#    state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
-#    df = pd.read_csv(state_csv_file,na_values='X')
-#
-#    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
-#    df.index = df.index.rename('DATE')
-#    df_state = pd.DataFrame()
-#    df_state.index = df.index
-#    for st in df.region.unique():
-#        df_state.loc[:,st] = df.loc[:,st]
-#    return df_state
+def state_data(csv_path,epwk, mode):
+    if mode == "test":
+        state_csv_file = csv_path+'state/ILINet.csv'
+        df = pd.read_csv(state_csv_file,na_values='X', header=1)
+
+    elif mode == "flux":
+        state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
+        df = pd.read_csv(state_csv_file,na_values='X')
+
+    elif mode == "retro": 
+        state_csv_file = csv_path +'/'+'state/'+ 'ILINet_State_' + str(epwk.year) +  str(epwk.week) + '.csv'
+        df = pd.read_csv(state_csv_file,na_values='X')
+    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+    df = df.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
+    
+    df = df.set_index('date')
+    df_state = pd.DataFrame(columns=[],index=df.index.unique())
+    st_dict = {'state':[]}
+    for st in df.region.unique():
+        df_state[st] = df[df.region==st]['unweighted_ili']
+        st_dict['state'].append(st)
+    return df_state, st_dict
 #
 def diff_op(df, target, diff_op):
     df_ex=pd.DataFrame(index=df.index)
