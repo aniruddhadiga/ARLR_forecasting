@@ -32,9 +32,9 @@ from scipy import signal
 
 from statsmodels.tsa.stattools import adfuller
 
-from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro 
+from data_prep import data_read_and_prep, get_season, prepdata, prepdata_flux, prep_aw_data, prep_ght_data, prepdata_append, prepdata_retro, int_op, state_data 
 #prepdata_state
-from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin
+from ARLR_exog import ARLR_regressor,ARLR_exog_module, get_bin, state_shifter
 
 from output_format import outputdistribution_bst, outputdistribution_Gaussker,accu_output, outputdistribution_fromtemplate, outputdistribution_fromtemplate_for_FSN, outputdistribution_fromtemplate_for_FluSight, outputdistribution_state_fromtemplate
 
@@ -89,7 +89,7 @@ def parse_args():
     ap.add_argument('--ght_data_nat', required=False, help='google health trends data stream')
     ap.add_argument('--ght_data_hhs', required=False, help='google health trends data stream')
     ap.add_argument('--ght_data_state', required=False, help='google health trends data stream')
-    ap.add_argument('--state_exog', required=False, help='state data as exog variables')
+    ap.add_argument('--state_exog', required=False,type=int, help='state data as exog variables')
     ap.add_argument('--sub_date', required=False, help='Submission date for FluSight output file, if not mentioned automatically computed to Monday date')
     ap.add_argument('--eval', required=False, help='evaluation mode for determing accuracy of forecasts, expects the input data frame to contain data for full season') 
     ap.add_argument('--mode', required=True, help="tells the system which mode to work in (typically address the data header inconsistencies)")
@@ -216,8 +216,14 @@ def main():
         #df_ght.index = df_ght.index.rename('DATE')
         #df_ght = df_ght.rename(columns={'state':'REGION'})
         ght_target = ['flu', 'cough', 'fever', 'influenza', 'cold']
+    if args.state_exog is None:
+        df_state = pd.DataFrame()
+    else: 
+        df_state, state_dict = state_data(csv_path,ews,args.mode)
+        targ_dict.update(state_dict)
+        df_state, targ_dict = state_shifter(df_state,targ_dict,0)
     
-           
+    
     directory_bst = args.out_folder + 'ARLR_bst/'# + str(args.forecast_from[:4])
     directory_Gaussker = args.out_folder + 'ARLR_Gaussker/'# + str(args.forecast_from[:4])
     
@@ -266,8 +272,10 @@ def main():
         if fdf[nan_chk_mask][targ_dict['target']].isna().values.any():
             print('Missing values in ILI data, cannot produce forecasts')
             continue    
-        df_m  = ARLR_regressor(fdf, df_wtr, df_ght, region, targ_dict, ews)
-        predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f) 
+        diff_val = 'no_diff'
+        df_m, df_ex = ARLR_regressor(fdf, df_wtr, df_ght, df_state, region, targ_dict, ews, diff_val)
+        predictions, bn_mat_bst, bn_mat_Gaussker, seas, lags_app_f, coeffs_f = ARLR_exog_module(df_m, targ_dict, ews, fct_weeks, allw_lags_f)
+        predictions=int_op(predictions, df_ex, targ_dict['target'], ews, diff_val) 
         for i in range(1,len(predictions[0,:])+1):
             print('Week: {}, Fct: {}'.format(i,(predictions[0,i-1])))
             df_res.loc[(ews+i).startdate(), 'location'] = region

@@ -173,38 +173,48 @@ def prep_ght_data(**kwargs):
 #
 #    return df
 
-#def prepdata_state(csv_path,epwk):
-#    pdb.set_trace()
-#    state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
-#    df = pd.read_csv(state_csv_file,na_values='X')
+def state_data(csv_path,epwk, mode):
+    if mode == "test":
+        state_csv_file = csv_path+'state/ILINet.csv'
+        df = pd.read_csv(state_csv_file,na_values='X', header=1)
+
+    elif mode == "flux":
+        state_csv_file = csv_path +'/'+ 'ILINet_state_' + str(epwk.year) +'EW'+ str(epwk.week) + '.csv'
+        df = pd.read_csv(state_csv_file,na_values='X')
+
+    elif mode == "retro": 
+        state_csv_file = csv_path +'/'+'state/'+ 'ILINet_State_' + str(epwk.year) +  str(epwk.week) + '.csv'
+        df = pd.read_csv(state_csv_file,na_values='X')
+    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["YEAR"]), int(row["WEEK"])).startdate() ,axis=1, result_type='reduce'))
+    df = df.rename(columns={'REGION TYPE': 'region_type', 'REGION': 'region', '% WEIGHTED ILI': 'weighted_ili', '%UNWEIGHTED ILI': 'unweighted_ili', 'DATE':'date'})
+    
+    df = df.set_index('date')
+    df_state = pd.DataFrame(columns=[],index=df.index.unique())
+    st_dict = {'state':[]}
+    for st in df.region.unique():
+        df_state[st] = df[df.region==st]['unweighted_ili']
+        st_dict['state'].append(st)
+    return df_state, st_dict
 #
-#    df['DATE'] = pd.to_datetime(df.apply(lambda row : epi.Week(int(row["year"]), int(row["week"])).startdate() ,axis=1, result_type='reduce'))
-#    df.index = df.index.rename('DATE')
-#    df_state = pd.DataFrame()
-#    df_state.index = df.index
-#    for st in df.region.unique():
-#        df_state.loc[:,st] = df.loc[:,st]
-#    return df_state
-#
-#def diff_op(df, target, diff_op)
-#    if diff_op == 'diff_1':
-#        df.loc[:,'lag_comp1'] = df[target].shift()   
-#        df.loc[:,'true_ili'] = df.loc[:,target]
-#        df[:,target] = df['true_ili']-df['true_ili'].shift()
-#    elif diff_op == 'no_diff':
-#        df['true_ili'] = df[target]
-#    
-#    return df
-#
-#def int_op(yp, df, target, ews, diff_op)
-#    if diff_op == 'diff_1':
-#        mask_fct_0 = df.index==pd.to_datetime(ews.startdate())
-#        mask_fct_1 = df.index==pd.to_datetime((ews+1).startdate())
-#        y_diff_comp = df[mask_fct_0].loc[:,'lag_comp1'].values
-#
-#        yp[0,:] = yp[0,:]+y_diff_comp
-#        yp[0,:] = np.exp(yp[0,:])
-#    elif diff_op='no_diff':
-#        yp[0,:] = np.exp(yp[0,:])
-#    
-#    return yp      
+def diff_op(df, target, diff_op):
+    df_ex=pd.DataFrame(index=df.index)
+    if diff_op == 'diff_1':
+        df_ex.loc[:,'lag_comp1'] = df[target].shift().interpolate(limit_direction='both').values   
+        df_ex.loc[:,'true_ili'] = df.loc[:,target].values
+        df.loc[:,target] = (df_ex['true_ili']-df_ex['true_ili'].shift().interpolate(limit_direction='both')).values
+    elif diff_op == 'no_diff':
+        df_ex.loc[:,'true_ili'] = df[target].values
+    return df,df_ex
+
+def int_op(yp, df, target, ews, diff_op):
+    if diff_op == 'diff_1':
+        mask_fct_0 = df.index==pd.to_datetime(ews.startdate())
+        mask_fct_1 = df.index==pd.to_datetime((ews+1).startdate())
+        y_diff_comp = df[mask_fct_0].loc[:,'lag_comp1'].values
+
+        yp[0,:] = yp[0,:]+y_diff_comp
+        yp[0,:] = np.exp(yp[0,:])
+    elif diff_op=='no_diff':
+        yp[0,:] = np.exp(yp[0,:])
+    
+    return yp      
