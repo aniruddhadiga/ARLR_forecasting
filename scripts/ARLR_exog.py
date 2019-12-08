@@ -74,13 +74,13 @@ def state_shifter(df_state, mask_targ_dict,num_shift):
     mask_targ_dict['state'] = df_state.columns[0:].to_list()
     return df_state, mask_targ_dict
      
-def ARLR_regressor(df, df_wtr, df_ght, df_state, region, mask_targ_dict, ews, diff_val):
+def ARLR_regressor(df, df_wtr, df_ght, df_state, region, mask_targ_dict_up, ews, diff_val):
     '''If we have other regressors, need a for loop'''
     ews_1 = ews+1 # we need ght and weather data for forecst week, hence +1
     df_reg = df[df['region']==region]
     #df_m = df_reg
-    df_reg[mask_targ_dict['target']] = np.log(df_reg[mask_targ_dict['target']])
-    df_m, df_ex = diff_op(df_reg,mask_targ_dict['target'],diff_op)
+    df_reg[mask_targ_dict_up['target']] = np.log(df_reg[mask_targ_dict_up['target']])
+    df_m, df_ex = diff_op(df_reg,mask_targ_dict_up['target'],diff_op)
     if df_wtr.empty and not df_ght.empty:
         df_m = pd.merge(df_m,df_wtr,how='outer', left_index=True, right_index=True)
         df_ght_reg = df_ght[df_ght['region']==region] 
@@ -96,7 +96,8 @@ def ARLR_regressor(df, df_wtr, df_ght, df_state, region, mask_targ_dict, ews, di
         df_ght_reg = df_ght[df_ght['region']==region]
         df_m = pd.merge(df_m,df_wtr_reg,how='outer', left_index=True, right_index=True)
         df_m = pd.merge(df_m,df_ght_reg,how='outer', left_index=True, right_index=True)
-        df_m = pd.merge(df_m, df_state, how='outer', left_index=True, right_index=True)
+    
+    df_m = pd.merge(df_m, df_state, how='outer', left_index=True, right_index=True)
     
     mask_targ = []
     for k in list(mask_targ_dict_up):
@@ -222,13 +223,7 @@ def ARLR_red_phase_exog(y,tr_tp,err_old, lags, res1, lags_app,ind, win, llr_tol)
                 lags_app.remove(lags_app[imin])
                 err_old = err_m[imin]
             else:
-            if (llr[imin]<llr_tol):
-                temp_tr_tp = np.delete(temp_tr_tp,imin,1) 
-                lags_app.remove(lags_app[imin])
-                err_old = err_m[imin]
-#                 pdb.set_trace()
-            else:
-#                 pdb.set_trace()
+            #   pdb.set_trace()
 
                 break
 

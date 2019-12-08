@@ -5,7 +5,7 @@
 #sbatch job.sbatch $year
 #done
 #source ./R_load.sh
-varibs=all_state
+varibs=state
 out_folder=dump/${varibs}_exog/
 years="2017 2018"
 for year in $years

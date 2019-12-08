@@ -254,7 +254,7 @@ def main():
         df_res = df_res.set_index('DATE')
 
         targ_dict['target'] = [targets['flux_ili'], targets['flux_wili']]
-        targ_dict['aw_target'] = aw_target
+        #targ_dict['aw_target'] = aw_target
         if fdf[header_region_type][fdf[header_region]==region].unique() == 'States':
             print(region)
             for v in targ_dict.values():
