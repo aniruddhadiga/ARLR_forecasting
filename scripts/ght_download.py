@@ -98,7 +98,7 @@ def download_ght_by_states_today(kw_list):
 
 #             df = df.append(df)
         
-        filename = filepath + 'ght_state-'+ str(epi.Week.thisweek().year) + str(epi.Week.thisweek().week)+'.csv'
+        filename = filepath + 'ght_state-'+ str(epi.Week.thisweek().year) + "{:02d}".format(epi.Week.thisweek().week)+'.csv'
         df.to_csv(filename)
     return df
 
@@ -132,7 +132,7 @@ def download_ght_state_to_hhs_nat(state_ght_csv, cty_pops_csv, st_hhs_csv):
     df_ght_nat[['flu','cough','fever','influenza','cold','nat_pops']] = df_ght_hhs.apply(lambda x: x[['flu','cough','fever','influenza','cold','hhs_pops']]*x['nat_pops_wt'],axis=1)    
     df_ght_nat = df_ght_nat.groupby('date').sum()
 #     df_ght_nat = df_ght_nat.set_index('date')
-    filename = filepath + 'ght_national-'+ str(epi.Week.thisweek().year) + str(epi.Week.thisweek().week)+'.csv'
+    filename = filepath + 'ght_national-'+ str(epi.Week.thisweek().year) + "{:02d}".format(epi.Week.thisweek().week) +'.csv'
     df_ght_nat.to_csv(filename)
     return
 
