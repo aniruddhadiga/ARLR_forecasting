@@ -1,6 +1,6 @@
 import pytrends
 import pandas as pd
-from pandas.io.json import normalize
+from pandas.io.json import _normalize
 from pytrends.request import TrendReq
 from datetime import date
 from datetime import date
@@ -105,13 +105,13 @@ def download_ght_by_states_today(kw_list):
 state_ght_csv = filepath+'ght_state-201947.csv'
 cty_pops_csv = filepath+'countypops_2013.csv'
 st_hhs_csv = filepath+'state_hhs_map.csv'
-pdb.set_trace()
+
 def download_ght_state_to_hhs_nat(state_ght_csv, cty_pops_csv, st_hhs_csv):
     df_ght = pd.read_csv(state_ght_csv)
-    df_ct_pops = pd.read_csv(cty_pops_csv, names=['cty_fips','pops'], header=-1, delim_whitespace=True)
+    df_ct_pops = pd.read_csv(cty_pops_csv, names=['cty_fips','pops'], header=None, delim_whitespace=True)
     df_ct_pops['st_fips'] = df_ct_pops.apply(lambda x: int(round(x['cty_fips']/1000)),axis=1)
     df_ct_pops.groupby('st_fips', as_index=False).sum()
-    df_st_to_hhs = pd.read_csv(st_hhs_csv, names=['st_fips','hhs', 'st_abrv', 'state'], header=-1)
+    df_st_to_hhs = pd.read_csv(st_hhs_csv, names=['st_fips','hhs', 'st_abrv', 'state'], header=None)
     df_st = df_ct_pops.groupby('st_fips',as_index=False).sum()
     df_st = df_st.merge(df_st_to_hhs)
     df_hhs_pop = df_st.groupby(['hhs'],as_index=False).sum()
@@ -125,7 +125,7 @@ def download_ght_state_to_hhs_nat(state_ght_csv, cty_pops_csv, st_hhs_csv):
     df_ght_hhs[['flu','cough','fever','influenza','cold','hhs_pops']] = df_ght_hhs.apply(lambda x:x[['flu','cough','fever','influenza','cold','hhs_pops']]*x['hhs_pops_wt'],axis=1)
     df_ght_hhs = df_ght_hhs.groupby(['date', 'hhs'], as_index=False).sum()
 #     df_ght_hhs = df_ght_hhs.set_index('date')
-    filename = filepath + 'ght_hhs-'+ str(epi.Week.thisweek().year) + str(epi.Week.thisweek().week)+'.csv'
+    filename = filepath + 'ght_hhs-'+ str(epi.Week.thisweek().year) + "{:02d}".format(epi.Week.thisweek().week) +'.csv'
     df_ght_hhs.to_csv(filename)
     df_ght_hhs['nat_pops_wt'] = df_ght_hhs.apply(lambda x: x['hhs_pops']/df_ght_hhs['hhs_pops'].unique().sum(),axis=1)
     df_ght_nat = df_ght_hhs
